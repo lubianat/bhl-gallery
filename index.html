@@ -57,7 +57,7 @@
 </head>
 
 <body>
-    <h1>Lazy Loaded Image Gallery</h1>
+    <h1>BHL-Wiki-GBIF Image Gallery</h1>
     <div class="loading" id="loading">Loading images...</div>
 
     <form id="filterForm" style="text-align: center; margin-bottom: 20px;">
@@ -194,8 +194,8 @@
 
                 let gbif_url = "https://www.gbif.org/species/" + encodeURIComponent(gbif_id);
                 let bhl_url = "https://www.biodiversitylibrary.org/page/" + encodeURIComponent(bhl_page_id);
-                let wikidata_url = encodeURIComponent(wikidata_id);
-                let commons_url = encodeURIComponent(commons_entity_id);
+                let wikidata_url = wikidata_id;
+                let commons_url = commons_entity_id;
 
                 const div = document.createElement("div");
                 div.className = "gallery-item";
