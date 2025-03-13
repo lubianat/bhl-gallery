@@ -4,7 +4,16 @@
 <head>
     <meta charset="UTF-8">
     <title>BHL-Wiki-GBIF Image Gallery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        body {
+            background: #f9f9f9;
+            color: #333;
+        }
+
+
         body {
             margin: 0;
             padding: 20px;
@@ -19,7 +28,7 @@
 
         .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             grid-gap: 15px;
             margin-top: 20px;
         }
@@ -35,6 +44,7 @@
 
         .gallery-item img {
             max-width: 100%;
+            min-height: 200px;
             height: auto;
             display: block;
             border-radius: 4px;
@@ -53,412 +63,125 @@
         .wiki-link-red {
             color: red;
         }
+
+        /* Autocomplete styles */
+        .autocomplete-suggestions {
+            border: 1px solid #ddd;
+            max-height: 150px;
+            overflow-y: auto;
+            background: #fff;
+            position: absolute;
+            z-index: 1000;
+            width: 100%;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 4px;
+        }
+
+        .autocomplete-suggestion {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .autocomplete-suggestion:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-suggestion:hover {
+            background: #f0f0f0;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
-    <h1>BHL-Wiki-GBIF Image Gallery</h1>
-    <div
-        style="text-align: center; margin-top: 10px; padding: 10px; background-color: #ffcc00; border: 1px solid #ff9900; border-radius: 4px;">
-        <strong>Note:</strong> This application is currently in testing. Please report any issues or feedback on the <a
-            href="https://github.com/lubianat/bhl_image_explorer/issues" target="_blank">GitHub Repo</a> or to <a
-            href="https://tiago.bio.br" target="_blank"> Tiago</a> wherever you prefer.
+    <div class="container py-4">
+        <h1 class="text-center mb-4">BHL-Wiki-GBIF Image Gallery</h1>
+
+        <div class="alert alert-info text-center" role="alert">
+            <strong>Note:</strong> This application is currently in testing. Please report any issues or feedback on the
+            <a href="https://github.com/lubianat/bhl_image_explorer/issues" target="_blank">GitHub Repo</a> or to
+            <a href="https://tiago.bio.br" target="_blank">Tiago</a> wherever you prefer.
+        </div>
+
+        <form id="filterForm" class="mb-4">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-4">
+                    <label for="taxonSelect" class="form-label">Default taxa:</label>
+                    <select id="taxonSelect" class="form-select" required>
+                        <option value="">Select a taxon</option>
+                        <option value="">All</option>
+                        <option value="212">Aves</option>
+                        <option value="797">Lepidoptera</option>
+                        <option value="131">Amphibia</option>
+                        <option value="359">Mammalia</option>
+                        <option value="6">Plantae</option>
+                        <option value="587">Perciformes</option>
+                    </select>
+                </div>
+                <div class="col-md-4 position-relative">
+                    <label for="taxonAutocomplete" class="form-label">Other taxa:</label>
+                    <input type="text" id="taxonAutocomplete" class="form-control" placeholder="Search taxon">
+                    <div id="autocompleteSuggestions" class="autocomplete-suggestions"></div>
+                </div>
+                <div class="col-md-4">
+                    <label for="continentSelect" class="form-label">Continent:</label>
+                    <select id="continentSelect" class="form-select">
+                        <option value="">Any</option>
+                        <option value="AFRICA">AFRICA</option>
+                        <option value="ANTARCTICA">ANTARCTICA</option>
+                        <option value="ASIA">ASIA</option>
+                        <option value="OCEANIA">OCEANIA</option>
+                        <option value="EUROPE">EUROPE</option>
+                        <option value="NORTH_AMERICA">NORTH_AMERICA</option>
+                        <option value="SOUTH_AMERICA">SOUTH_AMERICA</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-center mt-3">
+                <div class="col-md-6">
+                    <label class="form-label d-block">Data Source:</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="sourceJson" name="dataSource"
+                            value="species-api" checked>
+                        <label class="form-check-label" for="sourceJson">/species GBIF API (distribution)</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="sourceGbif" name="dataSource"
+                            value="occurrence-api">
+                        <label class="form-check-label" for="sourceGbif">/occurence API</label>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filter</button>
+                    <button type="button" id="resetFilter" class="btn btn-secondary">Reset Filter</button>
+                </div>
+            </div>
+            <p class="mt-3">
+                The GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions"
+                    target="_blank">species API</a>
+                and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence" target="_blank">occurrence API</a>
+                filters may yield different results. Filters use data from
+                <a href="https://qlever.cs.uni-freiburg.de/wikimedia-commons" target="_blank">QLever</a> from
+                2025-01-29, not updated live. Code available on
+                <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>.
+            </p>
+        </form>
+        <div class="alert alert-light text-center" role="alert" id="loading">
+            <span class="fs-5">Loading images...</span>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="gallery">
+            <!-- Gallery items will be dynamically inserted here -->
+        </div>
     </div>
-    </div>
-    <br>
-    <div class="loading" id="loading">Loading images...</div>
 
-    <form id="filterForm" style="text-align: center; margin-bottom: 20px;">
-        <label for="taxonSelect">Taxon:</label>
-        <select id="taxonSelect" required>
-            <option value="">Select a taxon</option>
-            <option value="212">Aves</option>
-            <option value="797">Lepidoptera</option>
-            <option value="131">Amphibia</option>
-            <option value="359">Mammalia</option>
-            <option value="6">Plantae</option>
-            <option value="587">Perciformes</option>
-        </select>
-        <label for="continentSelect">Continent:</label>
-        <select id="continentSelect">
-            <option value="">Any</option>
-            <option value="AFRICA">AFRICA</option>
-            <option value="ANTARCTICA">ANTARCTICA</option>
-            <option value="ASIA">ASIA</option>
-            <option value="OCEANIA">OCEANIA</option>
-            <option value="EUROPE">EUROPE</option>
-            <option value="NORTH_AMERICA">NORTH_AMERICA</option>
-            <option value="SOUTH_AMERICA">SOUTH_AMERICA</option>
-        </select>
-        <label>Data Source:</label>
-        <input type="radio" id="sourceJson" name="dataSource" value="species-api" checked>
-        <label for="sourceJson">/species GBIF API (distribution)</label>
-        <input type="radio" id="sourceGbif" name="dataSource" value="occurrence-api">
-        <label for="sourceGbif">/occurence API</label>
-
-        <button type="submit">Apply Filter</button>
-        <button type="button" id="resetFilter">Reset Filter</button>
-
-        <p>The GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions">
-                species
-                API </a> and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence" target="_blank">occurrence
-                API</a> filters may yield different result. Fiters use data from <a
-                href="https://qlever.cs.uni-freiburg.de/wikimedia-commons" target="_blank"> QLever</a> from 2025-01-29,
-            not updated
-            live. Code
-            available on <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>. </p>
-    </form>
-
-    <div class="gallery" id="gallery"></div>
-
-    <script>
-        // Load static GBIF mapping data from JSON file
-        let gbifMapping = {};
-
-        fetch('gbif_mapping.json')
-            .then(response => response.json())
-            .then(data => {
-                gbifMapping = data;
-                console.log(gbifMapping);
-                // Call function to render gallery after loading GBIF mapping
-                fetchImages();
-            })
-            .catch(error => {
-                console.error('Error loading GBIF mapping data:', error);
-            });
-
-        // Continent to country code mapping (LLM-generated, may have errors)
-        let continentToCountryCodes = {};
-
-        fetch('continent_to_country_codes.json')
-            .then(response => response.json())
-            .then(data => {
-                continentToCountryCodes = data;
-                console.log(continentToCountryCodes);
-            })
-            .catch(error => {
-                console.error('Error loading continent to country codes data:', error);
-            });
-
-        let continentKeywords = {};
-
-        fetch('continent_keywords.json')
-            .then(response => response.json())
-            .then(data => {
-                continentKeywords = data;
-                console.log(continentKeywords);
-            })
-            .catch(error => {
-                console.error('Error loading continent keywords data:', error);
-            });
-
-        // Placeholder for image data
-        let imagesData = [];
-
-        // Lazy loading using IntersectionObserver
-        const observer = new IntersectionObserver((entries, obs) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    const actualSrc = img.getAttribute("data-src");
-                    if (actualSrc) {
-                        img.src = actualSrc;
-                        img.removeAttribute("data-src");
-                    }
-                    obs.unobserve(img);
-                }
-            });
-        }, {
-            rootMargin: "0px 0px 200px 0px"
-        });
-
-        // Check if a species is in a particular continent based on country codes and locality text
-        function isInContinent(speciesId, continent) {
-            if (!continent || continent === "") return true; // No continent filter
-
-            const speciesData = gbifMapping[speciesId];
-            if (!speciesData) return false;
-
-            // Check parent taxonomy
-            const relevantTaxonIds = Object.keys(gbifMapping)
-                .filter(id => {
-                    return gbifMapping[id].parents &&
-                        gbifMapping[id].parents.some(p => p.toString() === speciesId);
-                });
-
-            if (relevantTaxonIds.length > 0) {
-                for (const taxonId of relevantTaxonIds) {
-                    if (isInContinent(taxonId, continent)) return true;
-                }
-            }
-
-            // Check country codes
-            const continentCountryCodes = continentToCountryCodes[continent] || [];
-            if (speciesData.country_codes.some(code => continentCountryCodes.includes(code))) {
-                return true;
-            }
-
-            // Check locality text
-            const continentKeywordList = continentKeywords[continent] || [];
-            if (speciesData.localities.some(loc => {
-                const locLower = loc.toLowerCase();
-                return continentKeywordList.some(keyword => locLower.includes(keyword.toLowerCase()));
-            })) {
-                return true;
-            }
-
-            return false;
-        }
-
-
-        // Filter based on taxon and geography using GBIF API (occurrence data)
-        async function applyTaxonFilter(taxonKey) {
-            function buildGbifUrl(taxonKey, continent) {
-                let url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&limit=0&facet=speciesKey&facetMincount=10&facetLimit=5000`;
-                if (continent && continent !== "") {
-                    url += `&continent=${encodeURIComponent(continent)}`;
-                }
-                return url;
-            }
-            let gbifUrl = buildGbifUrl(taxonKey, document.getElementById("continentSelect").value);
-
-            console.log(gbifUrl);
-
-            try {
-                const response = await fetch(gbifUrl);
-                if (!response.ok) throw new Error(`GBIF API error! status: ${response.status}`);
-                const gbifData = await response.json();
-                if (!gbifData.facets || gbifData.facets.length === 0) {
-                    alert("No facets found for the selected taxon.");
-                    return;
-                }
-                const facetCounts = gbifData.facets[0].counts;
-                if (!facetCounts || facetCounts.length === 0) {
-                    alert("No species found meeting the criteria.");
-                    return;
-                }
-                const validKeys = new Set(facetCounts.map(item => String(item.name)));
-                const filteredData = imagesData.filter(item => item.gbif_id && validKeys.has(String(item.gbif_id.value)));
-                renderGallery(filteredData);
-            } catch (error) {
-                console.error("Error fetching GBIF data:", error);
-                alert("Error applying taxon filter.");
-            } finally {
-                // Hide loading message when done
-                document.getElementById("loading").style.display = "none";
-            }
-        }
-
-        // Filter based on taxon and geography using local JSON (distribution data)
-        function applyFilters(taxonKey, continent) {
-            document.getElementById("loading").style.display = "block";
-
-            try {
-                // First get all species that have the taxon in their parents
-                const speciesInTaxon = Object.keys(gbifMapping).filter(speciesId => {
-                    return gbifMapping[speciesId].parents &&
-                        gbifMapping[speciesId].parents.includes(parseInt(taxonKey));
-                });
-
-                // Then filter by continent if specified
-                const validKeys = new Set(
-                    continent && continent !== ""
-                        ? speciesInTaxon.filter(speciesId => isInContinent(speciesId, continent))
-                        : speciesInTaxon
-                );
-
-                // Filter image data
-                const filteredData = imagesData.filter(item => {
-                    return item.gbif_id && validKeys.has(String(item.gbif_id.value));
-                });
-
-                renderGallery(filteredData);
-            } catch (error) {
-                console.error("Error applying filters:", error);
-                alert("Error applying filters.");
-            } finally {
-                document.getElementById("loading").style.display = "none";
-            }
-        }
-        function getUrlParams() {
-            const params = new URLSearchParams(window.location.search);
-            return {
-                taxonKey: params.get('taxon') || '',
-                continent: params.get('continent') || '',
-                dataSource: params.get('dataSource') || 'json'
-            };
-        }
-
-        // Populate form fields with URL parameters
-        function populateFormFields() {
-            const { taxonKey, continent, dataSource } = getUrlParams();
-            document.getElementById('taxonSelect').value = taxonKey;
-            document.getElementById('continentSelect').value = continent;
-            document.querySelector(`input[name="dataSource"][value="${dataSource}"]`).checked = true;
-        }
-
-        // Call the function to populate form fields on page load
-        window.onload = populateFormFields;
-        // Form handlers
-        document.getElementById("filterForm").addEventListener("submit", function (e) {
-            e.preventDefault();
-            document.getElementById("loading").style.display = "block";
-
-            const taxonKey = document.getElementById("taxonSelect").value;
-            const continent = document.getElementById("continentSelect").value;
-            const dataSource = document.querySelector('input[name="dataSource"]:checked').value;
-
-            if (!taxonKey) {
-                alert("Please select a valid taxon from the options.");
-                document.getElementById("loading").style.display = "none";
-                return;
-            }
-
-            const url = `?taxon=${taxonKey}&continent=${continent}&dataSource=${dataSource}`;
-            window.history.pushState({}, '', url);
-
-
-            if (dataSource === "occurrence-api") {
-                applyTaxonFilter(taxonKey);
-            } else {
-                applyFilters(taxonKey, continent);
-            }
-        });
-        document.getElementById("resetFilter").addEventListener("click", function () {
-            renderGallery(imagesData);
-        });
-
-        // URL to fetch image data from Qlever API
-        const qleverURL = "https://qlever.cs.uni-freiburg.de/api/wikimedia-commons?query=PREFIX+schema%3A+%3Chttp%3A%2F%2Fschema.org%2F%3E%0APREFIX+wd%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fentity%2F%3E%0APREFIX+wdt%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fprop%2Fdirect%2F%3E%0APREFIX+wikibase%3A+%3Chttp%3A%2F%2Fwikiba.se%2Fontology%23%3E%0ASELECT+DISTINCT+%3Ffile+%3Ftaxon+%3Fbhl_page_id+%3Furl+%3Fgbif_id+%3Ftaxon_name+%28GROUP_CONCAT%28%3Flang%3B+SEPARATOR%3D%22%2C%22%29+AS+%3Flangs%29%0AWHERE+%7B+%0A++%3Ffile+wdt%3AP180+%3Ftaxon+.%0A++%3Ffile+wdt%3AP687+%3Fbhl_page_id+.%0A++%3Ffile+schema%3AcontentUrl+%3Furl+.%0A++SERVICE+%3Chttps%3A%2F%2Fqlever.cs.uni-freiburg.de%2Fapi%2Fwikidata%3E+%7B%0A++++%3Ftaxon+wdt%3AP846+%3Fgbif_id+.%0A++++%3Ftaxon+wdt%3AP225+%3Ftaxon_name+.%0A++++%3Farticle+schema%3Aabout+%3Ftaxon+.+%0A++++%3Farticle+schema%3AinLanguage+%3Flang+%3B%0A++++schema%3AisPartOf+%5B+wikibase%3AwikiGroup+%22wikipedia%22+%5D+.%0A++++FILTER%28%3Flang+in+%28%27en%27%2C+%27fr%27%2C+%27pt%27%2C+%27es%27%29%29+.%0A++%7D%0A%7D%0AGROUP+BY+%3Ffile+%3Ftaxon+%3Fbhl_page_id+%3Furl+%3Fgbif_id+%3Ftaxon_name"
-
-        // Placeholder 1x1 pixel transparent image
-        const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-
-        // Render gallery using data.results.bindings and extracting .value for each field
-        function renderGallery(data) {
-            const gallery = document.getElementById("gallery");
-            gallery.innerHTML = "";
-            if (!data.length) {
-                gallery.innerHTML = "<p>No images available.</p>";
-                return;
-            }
-            data.forEach(item => {
-                // Each item is an object where fields (url, taxon, etc.) have a .value property
-                const imageURL = item.url ? item.url.value : "";
-                const taxon_name = item.taxon_name ? item.taxon_name.value : "Image";
-                const gbif_id = item.gbif_id ? item.gbif_id.value : "Unknown";
-                const bhl_page_id = item.bhl_page_id ? item.bhl_page_id.value : "Unknown";
-                const wikidata_id = item.taxon ? item.taxon.value : "";
-                const commons_entity_id = item.file ? item.file.value : "";
-                const langs = item.langs ? item.langs.value.split(",") : [];
-
-                let gbif_url = "https://www.gbif.org/species/" + encodeURIComponent(gbif_id);
-                let bhl_url = "https://www.biodiversitylibrary.org/page/" + encodeURIComponent(bhl_page_id);
-                let wikidata_url = wikidata_id;
-                let commons_url = commons_entity_id;
-
-                const div = document.createElement("div");
-                div.className = "gallery-item";
-
-                const img = document.createElement("img");
-                // Set placeholder as src and store actual image URL in data-src
-                img.src = placeholder;
-                img.setAttribute("data-src", imageURL);
-                img.alt = taxon_name;
-
-                const legend = document.createElement("div");
-                legend.className = "image-legend";
-
-                const taxonNameP = document.createElement("p");
-                taxonNameP.textContent = taxon_name;
-
-                const linksP = document.createElement("p");
-                const gbifLink = document.createElement("a");
-                gbifLink.href = gbif_url;
-                gbifLink.target = "_blank";
-                gbifLink.textContent = "GBIF";
-
-                const bhlLink = document.createElement("a");
-                bhlLink.href = bhl_url;
-                bhlLink.target = "_blank";
-                bhlLink.textContent = "BHL";
-
-                const commonsLink = document.createElement("a");
-                commonsLink.href = commons_url;
-                commonsLink.target = "_blank";
-                commonsLink.textContent = "Commons";
-
-                const wikidataLink = document.createElement("a");
-                wikidataLink.href = wikidata_url;
-                wikidataLink.target = "_blank";
-                wikidataLink.textContent = "Wikidata";
-
-                linksP.appendChild(gbifLink);
-                linksP.appendChild(document.createTextNode(" | "));
-                linksP.appendChild(bhlLink);
-                linksP.appendChild(document.createTextNode(" | "));
-                linksP.appendChild(commonsLink);
-                linksP.appendChild(document.createTextNode(" | "));
-                linksP.appendChild(wikidataLink);
-
-                const wikipediaLinksP = document.createElement("p");
-                wikipediaLinksP.textContent = "Wikipedia links: ";
-                const all_langs = ["en", "pt", "fr", "es"]
-                all_langs.forEach(lang => {
-                    const wikiLink = document.createElement("a");
-                    const wikiUrl = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(taxon_name)}`;
-                    wikiLink.href = wikiUrl;
-                    wikiLink.target = "_blank";
-                    wikiLink.textContent = lang.toUpperCase();
-                    if (langs.includes(lang)) {
-                        wikiLink.className = "wiki-link-blue";
-                    } else {
-                        wikiLink.className = "wiki-link-red";
-                    }
-                    wikipediaLinksP.appendChild(wikiLink);
-                    wikipediaLinksP.appendChild(document.createTextNode(" | "));
-                });
-                // Remove the last " | "
-                wikipediaLinksP.removeChild(wikipediaLinksP.lastChild);
-
-                legend.appendChild(taxonNameP);
-                legend.appendChild(linksP);
-                legend.appendChild(wikipediaLinksP);
-
-                div.appendChild(img);
-                div.appendChild(legend);
-                gallery.appendChild(div);
-                observer.observe(img);
-            });
-        }
-
-        // Fetch images from Qlever API and handle SPARQL response structure
-        async function fetchImages() {
-            try {
-                const response = await fetch(qleverURL);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                // Expecting structure: { head: { vars: [...] }, results: { bindings: [...] } }
-                if (data.results && Array.isArray(data.results.bindings)) {
-                    imagesData = data.results.bindings;
-                } else {
-                    console.error("Unexpected API response structure", data);
-                    imagesData = [];
-                }
-                renderGallery(imagesData);
-            } catch (error) {
-                console.error("Error fetching images:", error);
-                document.getElementById("gallery").innerHTML = "<p>Error loading images.</p>";
-            } finally {
-                document.getElementById("loading").style.display = "none";
-            }
-        }
-
-        // Start fetching images
-        fetchImages();
-    </script>
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="script.js"></script>
 </body>
 
 </html>
