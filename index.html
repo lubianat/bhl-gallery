@@ -58,6 +58,13 @@
 
 <body>
     <h1>BHL-Wiki-GBIF Image Gallery</h1>
+    <div
+        style="text-align: center; margin-top: 10px; padding: 10px; background-color: #ffcc00; border: 1px solid #ff9900; border-radius: 4px;">
+        <strong>Note:</strong> This application is currently in testing. Please report any issues or feedback on the <a
+            href="https://github.com/lubianat/bhl_image_explorer/issues" target="_blank">GitHub Repo</a>.
+    </div>
+    </div>
+    <br>
     <div class="loading" id="loading">Loading images...</div>
 
     <form id="filterForm" style="text-align: center; margin-bottom: 20px;">
@@ -90,9 +97,10 @@
         <button type="submit">Apply Filter</button>
         <button type="button" id="resetFilter">Reset Filter</button>
 
-        <p>GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions"> species
+        <p>The GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions">
+                species
                 API </a> and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence" target="_blank">occurrence
-                API</a> data may differ. Fiters use data from QLever from 2025-01-29, not updated
+                API</a> filters may yield different result. Fiters use data from QLever from 2025-01-29, not updated
             live. Code
             available on <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>. </p>
     </form>
