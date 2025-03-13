@@ -61,7 +61,8 @@
     <div
         style="text-align: center; margin-top: 10px; padding: 10px; background-color: #ffcc00; border: 1px solid #ff9900; border-radius: 4px;">
         <strong>Note:</strong> This application is currently in testing. Please report any issues or feedback on the <a
-            href="https://github.com/lubianat/bhl_image_explorer/issues" target="_blank">GitHub Repo</a>.
+            href="https://github.com/lubianat/bhl_image_explorer/issues" target="_blank">GitHub Repo</a> or to <a
+            href="https://tiago.bio.br" target="_blank"> Tiago</a> wherever you prefer.
     </div>
     </div>
     <br>
@@ -76,6 +77,7 @@
             <option value="131">Amphibia</option>
             <option value="359">Mammalia</option>
             <option value="6">Plantae</option>
+            <option value="587">Perciformes</option>
         </select>
         <label for="continentSelect">Continent:</label>
         <select id="continentSelect">
@@ -89,9 +91,9 @@
             <option value="SOUTH_AMERICA">SOUTH_AMERICA</option>
         </select>
         <label>Data Source:</label>
-        <input type="radio" id="sourceJson" name="dataSource" value="json" checked>
+        <input type="radio" id="sourceJson" name="dataSource" value="species-api" checked>
         <label for="sourceJson">/species GBIF API (distribution)</label>
-        <input type="radio" id="sourceGbif" name="dataSource" value="gbif">
+        <input type="radio" id="sourceGbif" name="dataSource" value="occurrence-api">
         <label for="sourceGbif">/occurence API</label>
 
         <button type="submit">Apply Filter</button>
@@ -100,7 +102,9 @@
         <p>The GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions">
                 species
                 API </a> and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence" target="_blank">occurrence
-                API</a> filters may yield different result. Fiters use data from QLever from 2025-01-29, not updated
+                API</a> filters may yield different result. Fiters use data from <a
+                href="https://qlever.cs.uni-freiburg.de/wikimedia-commons" target="_blank"> QLever</a> from 2025-01-29,
+            not updated
             live. Code
             available on <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>. </p>
     </form>
@@ -276,8 +280,25 @@
                 document.getElementById("loading").style.display = "none";
             }
         }
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                taxonKey: params.get('taxon') || '',
+                continent: params.get('continent') || '',
+                dataSource: params.get('dataSource') || 'json'
+            };
+        }
 
-        // Form handlers
+        // Populate form fields with URL parameters
+        function populateFormFields() {
+            const { taxonKey, continent, dataSource } = getUrlParams();
+            document.getElementById('taxonSelect').value = taxonKey;
+            document.getElementById('continentSelect').value = continent;
+            document.querySelector(`input[name="dataSource"][value="${dataSource}"]`).checked = true;
+        }
+
+        // Call the function to populate form fields on page load
+        window.onload = populateFormFields;
         // Form handlers
         document.getElementById("filterForm").addEventListener("submit", function (e) {
             e.preventDefault();
@@ -293,7 +314,11 @@
                 return;
             }
 
-            if (dataSource === "gbif") {
+            const url = `?taxon=${taxonKey}&continent=${continent}&dataSource=${dataSource}`;
+            window.history.pushState({}, '', url);
+
+
+            if (dataSource === "occurrence-api") {
                 applyTaxonFilter(taxonKey);
             } else {
                 applyFilters(taxonKey, continent);
