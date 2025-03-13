@@ -68,6 +68,7 @@
             <option value="797">Lepidoptera</option>
             <option value="131">Amphibia</option>
             <option value="359">Mammalia</option>
+            <option value="6">Plantae</option>
         </select>
         <label for="continentSelect">Continent:</label>
         <select id="continentSelect">
@@ -80,21 +81,126 @@
             <option value="NORTH_AMERICA">NORTH_AMERICA</option>
             <option value="SOUTH_AMERICA">SOUTH_AMERICA</option>
         </select>
+        <label>Data Source:</label>
+        <input type="radio" id="sourceJson" name="dataSource" value="json" checked>
+        <label for="sourceJson">/species GBIF API (distribution)</label>
+        <input type="radio" id="sourceGbif" name="dataSource" value="gbif">
+        <label for="sourceGbif">/occurence API</label>
 
-        <button type="submit">Apply Filter based on GBIF </button>
+        <button type="submit">Apply Filter</button>
         <button type="button" id="resetFilter">Reset Filter</button>
 
-        <p>Notes: (1) Observations in GBIF might be recorded in unexpected places and (2) Uses data from QLever from
-            2025-01-29, not updated live. Code available on <a href="https://github.com/lubianat/bhl_image_explorer"
-                target="_blank">GitHub</a>. </p>
+        <p>GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions"> species
+                API </a> and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence" target="_blank">occurrence
+                API</a> data may differ. Fiters use data from QLever from 2025-01-29, not updated
+            live. Code
+            available on <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>. </p>
     </form>
 
     <div class="gallery" id="gallery"></div>
 
     <script>
+        // Load static GBIF mapping data from JSON file
+        let gbifMapping = {};
 
+        fetch('gbif_mapping.json')
+            .then(response => response.json())
+            .then(data => {
+                gbifMapping = data;
+                console.log(gbifMapping);
+                // Call function to render gallery after loading GBIF mapping
+                fetchImages();
+            })
+            .catch(error => {
+                console.error('Error loading GBIF mapping data:', error);
+            });
+
+        // Continent to country code mapping (LLM-generated, may have errors)
+        let continentToCountryCodes = {};
+
+        fetch('continent_to_country_codes.json')
+            .then(response => response.json())
+            .then(data => {
+                continentToCountryCodes = data;
+                console.log(continentToCountryCodes);
+            })
+            .catch(error => {
+                console.error('Error loading continent to country codes data:', error);
+            });
+
+        let continentKeywords = {};
+
+        fetch('continent_keywords.json')
+            .then(response => response.json())
+            .then(data => {
+                continentKeywords = data;
+                console.log(continentKeywords);
+            })
+            .catch(error => {
+                console.error('Error loading continent keywords data:', error);
+            });
+
+        // Placeholder for image data
+        let imagesData = [];
+
+        // Lazy loading using IntersectionObserver
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    const actualSrc = img.getAttribute("data-src");
+                    if (actualSrc) {
+                        img.src = actualSrc;
+                        img.removeAttribute("data-src");
+                    }
+                    obs.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: "0px 0px 200px 0px"
+        });
+
+        // Check if a species is in a particular continent based on country codes and locality text
+        function isInContinent(speciesId, continent) {
+            if (!continent || continent === "") return true; // No continent filter
+
+            const speciesData = gbifMapping[speciesId];
+            if (!speciesData) return false;
+
+            // Check parent taxonomy
+            const relevantTaxonIds = Object.keys(gbifMapping)
+                .filter(id => {
+                    return gbifMapping[id].parents &&
+                        gbifMapping[id].parents.some(p => p.toString() === speciesId);
+                });
+
+            if (relevantTaxonIds.length > 0) {
+                for (const taxonId of relevantTaxonIds) {
+                    if (isInContinent(taxonId, continent)) return true;
+                }
+            }
+
+            // Check country codes
+            const continentCountryCodes = continentToCountryCodes[continent] || [];
+            if (speciesData.country_codes.some(code => continentCountryCodes.includes(code))) {
+                return true;
+            }
+
+            // Check locality text
+            const continentKeywordList = continentKeywords[continent] || [];
+            if (speciesData.localities.some(loc => {
+                const locLower = loc.toLowerCase();
+                return continentKeywordList.some(keyword => locLower.includes(keyword.toLowerCase()));
+            })) {
+                return true;
+            }
+
+            return false;
+        }
+
+
+        // Filter based on taxon and geography using GBIF API (occurrence data)
         async function applyTaxonFilter(taxonKey) {
-
             function buildGbifUrl(taxonKey, continent) {
                 let url = `https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&limit=0&facet=speciesKey&facetMincount=10&facetLimit=5000`;
                 if (continent && continent !== "") {
@@ -131,48 +237,69 @@
             }
         }
 
+        // Filter based on taxon and geography using local JSON (distribution data)
+        function applyFilters(taxonKey, continent) {
+            document.getElementById("loading").style.display = "block";
+
+            try {
+                // First get all species that have the taxon in their parents
+                const speciesInTaxon = Object.keys(gbifMapping).filter(speciesId => {
+                    return gbifMapping[speciesId].parents &&
+                        gbifMapping[speciesId].parents.includes(parseInt(taxonKey));
+                });
+
+                // Then filter by continent if specified
+                const validKeys = new Set(
+                    continent && continent !== ""
+                        ? speciesInTaxon.filter(speciesId => isInContinent(speciesId, continent))
+                        : speciesInTaxon
+                );
+
+                // Filter image data
+                const filteredData = imagesData.filter(item => {
+                    return item.gbif_id && validKeys.has(String(item.gbif_id.value));
+                });
+
+                renderGallery(filteredData);
+            } catch (error) {
+                console.error("Error applying filters:", error);
+                alert("Error applying filters.");
+            } finally {
+                document.getElementById("loading").style.display = "none";
+            }
+        }
+
+        // Form handlers
+        // Form handlers
         document.getElementById("filterForm").addEventListener("submit", function (e) {
             e.preventDefault();
-            // Show loading message when form is submitted
             document.getElementById("loading").style.display = "block";
-            // ... then proceed to extract the taxon key and call applyTaxonFilter()
-            const select = document.getElementById("taxonSelect");
-            const selectedKey = select.value;
-            if (!selectedKey) {
+
+            const taxonKey = document.getElementById("taxonSelect").value;
+            const continent = document.getElementById("continentSelect").value;
+            const dataSource = document.querySelector('input[name="dataSource"]:checked').value;
+
+            if (!taxonKey) {
                 alert("Please select a valid taxon from the options.");
-                document.getElementById("loading").style.display = "none"; // Hide loading if no valid key
+                document.getElementById("loading").style.display = "none";
                 return;
             }
-            applyTaxonFilter(selectedKey);
-        });
 
+            if (dataSource === "gbif") {
+                applyTaxonFilter(taxonKey);
+            } else {
+                applyFilters(taxonKey, continent);
+            }
+        });
         document.getElementById("resetFilter").addEventListener("click", function () {
             renderGallery(imagesData);
         });
 
         // URL to fetch image data from Qlever API
         const qleverURL = "https://qlever.cs.uni-freiburg.de/api/wikimedia-commons?query=PREFIX+schema%3A+%3Chttp%3A%2F%2Fschema.org%2F%3E%0APREFIX+wd%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fentity%2F%3E%0APREFIX+wdt%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fprop%2Fdirect%2F%3E%0APREFIX+wikibase%3A+%3Chttp%3A%2F%2Fwikiba.se%2Fontology%23%3E%0ASELECT+DISTINCT+%3Ffile+%3Ftaxon+%3Fbhl_page_id+%3Furl+%3Fgbif_id+%3Ftaxon_name+%28GROUP_CONCAT%28%3Flang%3B+SEPARATOR%3D%22%2C%22%29+AS+%3Flangs%29%0AWHERE+%7B+%0A++%3Ffile+wdt%3AP180+%3Ftaxon+.%0A++%3Ffile+wdt%3AP687+%3Fbhl_page_id+.%0A++%3Ffile+schema%3AcontentUrl+%3Furl+.%0A++SERVICE+%3Chttps%3A%2F%2Fqlever.cs.uni-freiburg.de%2Fapi%2Fwikidata%3E+%7B%0A++++%3Ftaxon+wdt%3AP846+%3Fgbif_id+.%0A++++%3Ftaxon+wdt%3AP225+%3Ftaxon_name+.%0A++++%3Farticle+schema%3Aabout+%3Ftaxon+.+%0A++++%3Farticle+schema%3AinLanguage+%3Flang+%3B%0A++++schema%3AisPartOf+%5B+wikibase%3AwikiGroup+%22wikipedia%22+%5D+.%0A++++FILTER%28%3Flang+in+%28%27en%27%2C+%27fr%27%2C+%27pt%27%2C+%27es%27%29%29+.%0A++%7D%0A%7D%0AGROUP+BY+%3Ffile+%3Ftaxon+%3Fbhl_page_id+%3Furl+%3Fgbif_id+%3Ftaxon_name"
+
         // Placeholder 1x1 pixel transparent image
         const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-
-        let imagesData = [];
-
-        // Lazy loading using IntersectionObserver
-        const observer = new IntersectionObserver((entries, obs) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const img = entry.target;
-                    const actualSrc = img.getAttribute("data-src");
-                    if (actualSrc) {
-                        img.src = actualSrc;
-                        img.removeAttribute("data-src");
-                    }
-                    obs.unobserve(img);
-                }
-            });
-        }, {
-            rootMargin: "0px 0px 200px 0px"
-        });
 
         // Render gallery using data.results.bindings and extracting .value for each field
         function renderGallery(data) {
@@ -298,9 +425,6 @@
 
         // Start fetching images
         fetchImages();
-
-
-
     </script>
 </body>
 
