@@ -72,6 +72,7 @@ fetch('continent_keywords.json')
     });
 
 // Global variable to store images data and pagination parameters
+let originalImagesData = [];
 let imagesData = [];
 let currentPage = 0;
 const pageSize = 20; // Adjust the number of images per page as needed
@@ -103,6 +104,8 @@ function isInContinent(speciesId, continent) {
 
     const speciesData = gbifMapping[speciesId];
     if (!speciesData) return false;
+
+    console.log(`Checking species ${speciesId} in continent ${continent}`);
 
     // Check parent taxonomy recursively
     const relevantTaxonIds = Object.keys(gbifMapping).filter(id =>
@@ -158,8 +161,8 @@ async function applyTaxonFilter(taxonKey) {
             return;
         }
         const validKeys = new Set(facetCounts.map(item => String(item.name)));
-        const filteredData = imagesData.filter(item => item.gbif_id && validKeys.has(String(item.gbif_id.value)));
-        renderGalleryPaginated(filteredData, true);
+        imagesData = originalImagesData.filter(item => item.gbif_id && validKeys.has(String(item.gbif_id.value)));
+        renderGalleryPaginated(imagesData, true);
     } catch (error) {
         console.error("Error fetching GBIF data:", error);
         alert("Error applying taxon filter.");
@@ -172,6 +175,7 @@ async function applyTaxonFilter(taxonKey) {
 // Filter based on taxon and geography using local JSON distribution data
 function applyFilters(taxonKey, continent) {
     document.getElementById("loading").style.display = "block";
+    console.log(`Applying filters: taxon=${taxonKey}, continent=${continent}`);
     try {
         let speciesInTaxon = [];
         if (taxonKey == "ALL") {
@@ -186,10 +190,10 @@ function applyFilters(taxonKey, continent) {
                 ? speciesInTaxon.filter(speciesId => isInContinent(speciesId, continent))
                 : speciesInTaxon
         );
-        const filteredData = imagesData.filter(item =>
+        imagesData = originalImagesData.filter(item =>
             item.gbif_id && validKeys.has(String(item.gbif_id.value))
         );
-        renderGalleryPaginated(filteredData, true);
+        renderGalleryPaginated(imagesData, true);
     } catch (error) {
         console.error("Error applying filters:", error);
         alert("Error applying filters.");
@@ -350,6 +354,7 @@ async function fetchImages() {
             console.error("Unexpected API response structure", data);
             imagesData = [];
         }
+        originalImagesData = imagesData;
         renderGalleryPaginated(imagesData, true);
     } catch (error) {
         console.error("Error fetching images:", error);
@@ -381,3 +386,4 @@ document.getElementById("filterForm").addEventListener("submit", function (e) {
 document.getElementById("resetFilter").addEventListener("click", function () {
     renderGalleryPaginated(imagesData, true);
 });
+
