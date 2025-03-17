@@ -203,9 +203,37 @@ function applyFilters(taxonKey, continent) {
     }
 }
 
-// Global QLever API URL for fetching image data from Wikimedia Commons
-const qleverURL = "https://qlever.cs.uni-freiburg.de/api/wikimedia-commons?query=PREFIX+schema%3A+%3Chttp%3A%2F%2Fschema.org%2F%3E%0APREFIX+wd%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fentity%2F%3E%0APREFIX+wdt%3A+%3Chttp%3A%2F%2Fwww.wikidata.org%2Fprop%2Fdirect%2F%3E%0APREFIX+wikibase%3A+%3Chttp%3A%2F%2Fwikiba.se%2Fontology%23%3E%0ASELECT+DISTINCT+%3Ffile+%3Ftaxon+%3Fbhl_page_id+%3Furl+%3Fgbif_id+%3Ftaxon_name+%28GROUP_CONCAT%28%3Flang%3B+SEPARATOR%3D%22%2C%22%29+AS+%3Flangs%29%0AWHERE+%7B+%0A++%3Ffile+wdt%3AP180+%3Ftaxon+.%0A++%3Ffile+wdt%3AP687+%3Fbhl_page_id+.%0A++%3Ffile+schema%3AcontentUrl+%3Furl+.%0A++SERVICE+%3Chttps%3A%2F%2Fqlever.cs.uni-freiburg.de%2Fapi%2Fwikidata%3E+%7B%0A++++%3Ftaxon+wdt%3AP846+%3Fgbif_id+.%0A++++%3Ftaxon+wdt%3AP225+%3Ftaxon_name+.%0A++++%3Farticle+schema%3Aabout+%3Ftaxon+.+%0A++++%3Farticle+schema%3AinLanguage+%3Flang+%3B%0A++++schema%3AisPartOf+%5B+wikibase%3AwikiGroup+%22wikipedia%22+%5D+.%0A++++FILTER%28%3Flang+in+%28%27en%27%2C+%27fr%27%2C+%27pt%27%2C+%27es%27%29%29+.%0A++%7D%0A%7D%0AGROUP+BY+%3Ffile+%3Ftaxon+%3Fbhl_page_id+%3Furl+%3Fgbif_id+%3Ftaxon_name";
+// Define the human-readable SPARQL query
+const humanReadableQuery = `
+PREFIX schema: <http://schema.org/>
+PREFIX wd: <http://www.wikidata.org/entity/>
+PREFIX wdt: <http://www.wikidata.org/prop/direct/>
+PREFIX wikibase: <http://wikiba.se/ontology#>
+SELECT DISTINCT ?file ?taxon ?bhl_page_id ?url ?gbif_id ?taxon_name ?inat_id (GROUP_CONCAT(?lang; SEPARATOR=",") AS ?langs)
+WHERE {
+  ?file wdt:P180 ?taxon.
+  ?file wdt:P687 ?bhl_page_id.
+  ?file schema:contentUrl ?url.
+  SERVICE <https://qlever.cs.uni-freiburg.de/api/wikidata> {
+    ?taxon wdt:P846 ?gbif_id.
+    ?taxon wdt:P225 ?taxon_name.
+    OPTIONAL { ?taxon wdt:P3151 ?inat_id .}
+    ?article schema:about ?taxon.
+    ?article schema:inLanguage ?lang;
+             schema:isPartOf [ wikibase:wikiGroup "wikipedia" ].
+    FILTER(?lang in ('en', 'fr', 'pt', 'es')).
+  }
+}
+GROUP BY ?file ?taxon ?bhl_page_id ?url ?gbif_id ?taxon_name ?inat_id
+`;
 
+// Encode the query for URL inclusion
+const encodedQuery = encodeURIComponent(humanReadableQuery);
+
+// Construct the QLever API URL with the encoded query
+const qleverURL = `https://qlever.cs.uni-freiburg.de/api/wikimedia-commons?query=${encodedQuery}`;
+
+console.log(qleverURL);
 // ----- Pagination and Infinite Scroll Functions -----
 
 // Appends a batch of gallery items to the existing gallery.
@@ -215,6 +243,7 @@ function appendGalleryItems(dataBatch) {
         const imageURL = item.url ? item.url.value : "";
         const taxon_name = item.taxon_name ? item.taxon_name.value : "Image";
         const gbif_id = item.gbif_id ? item.gbif_id.value : "Unknown";
+        const inat_id = item.inat_id ? item.inat_id.value : "Unknown";
         const bhl_page_id = item.bhl_page_id ? item.bhl_page_id.value : "Unknown";
         const wikidata_id = item.taxon ? item.taxon.value : "";
         const commons_entity_id = item.file ? item.file.value : "";
@@ -222,6 +251,7 @@ function appendGalleryItems(dataBatch) {
 
         let gbif_url = "https://www.gbif.org/species/" + encodeURIComponent(gbif_id);
         let bhl_url = "https://www.biodiversitylibrary.org/page/" + encodeURIComponent(bhl_page_id);
+        let inat_url = "https://www.inaturalist.org/taxa/" + encodeURIComponent(inat_id);
         let wikidata_url = wikidata_id;
         let commons_url = commons_entity_id;
 
@@ -240,6 +270,12 @@ function appendGalleryItems(dataBatch) {
         taxonNameP.textContent = taxon_name;
 
         const linksP = document.createElement("p");
+
+        const inatLink = document.createElement("a");
+        inatLink.href = inat_url;
+        inatLink.target = "_blank";
+        inatLink.textContent = "iNat";
+
         const gbifLink = document.createElement("a");
         gbifLink.href = gbif_url;
         gbifLink.target = "_blank";
@@ -249,6 +285,7 @@ function appendGalleryItems(dataBatch) {
         bhlLink.href = bhl_url;
         bhlLink.target = "_blank";
         bhlLink.textContent = "BHL";
+
 
         const commonsLink = document.createElement("a");
         commonsLink.href = commons_url;
@@ -260,6 +297,9 @@ function appendGalleryItems(dataBatch) {
         wikidataLink.target = "_blank";
         wikidataLink.textContent = "Wikidata";
 
+
+        linksP.appendChild(inatLink);
+        linksP.appendChild(document.createTextNode(" | "));
         linksP.appendChild(gbifLink);
         linksP.appendChild(document.createTextNode(" | "));
         linksP.appendChild(bhlLink);
