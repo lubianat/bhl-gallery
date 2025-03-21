@@ -135,7 +135,6 @@ def wikidata_langs():
       ?article schema:about ?taxon ;
                schema:inLanguage ?lang ;
                schema:isPartOf [ wikibase:wikiGroup "wikipedia" ].
-      FILTER(?lang in ("en", "fr", "pt", "es"))
     }}
     GROUP BY ?taxon
     """
