@@ -21,6 +21,7 @@ document.getElementById('taxonAutocomplete').addEventListener('input', function 
             document.getElementById('autocompleteSuggestions').innerHTML = suggestions;
         })
         .catch(error => {
+            document.getElementById("imageCounter").classList.add("hidden");
             console.error('Error fetching suggestions:', error);
         });
 });
@@ -70,6 +71,57 @@ const observer = new IntersectionObserver((entries, obs) => {
     rootMargin: "0px 0px 10px 0px",
     threshold: 0.5
 });
+
+function updateGlobalUsesForBatch(imagesBatch) {
+
+    console.log(imagesBatch);
+    // Extract unique Commons file names from the batch.
+    const fileNames = imagesBatch.map(item => item.url).filter(name => name);
+
+    // Get only the file name from the URL.
+    fileNames.forEach((url, index) => {
+        const parts = url.split("/");
+        fileNames[index] = parts[parts.length - 1];
+    });
+
+    console.log(fileNames);
+    const uniqueFileNames = [...new Set(fileNames)];
+    if (!uniqueFileNames.length) return;
+
+    // Construct the query parameter (comma-separated list).
+    const filesParam = uniqueFileNames.join("|");
+
+    // Call the new API endpoint to get global usage data.
+    fetch(`/api/global_uses/${encodeURIComponent(filesParam)}`)
+        .then(response => response.json())
+        .then(data => {
+            // Data is an object mapping each file name to its global usage info.
+            console.log(data);
+            // Now update each gallery item that was rendered.
+            document.querySelectorAll('.gallery-item').forEach(itemElem => {
+                console.log(itemElem);
+                const fileName = itemElem.querySelector('img').getAttribute('data-src');
+                if (!fileName) return; // Skip if fileName is null
+                // Uncode the file name; it is URL encoded.
+                const parts = fileName.split("/");
+                const file = parts[parts.length - 1];
+                let fileUncoded = decodeURIComponent(file);
+                fileUncoded = fileUncoded.replace(/_/g, " ");
+                console.log(fileUncoded);
+                console.log(data[fileUncoded]);
+
+                if (fileUncoded && data[fileUncoded]) {
+                    const globalUsageP = itemElem.querySelector('.global-usage');
+                    if (globalUsageP) {
+                        globalUsageP.textContent = "Global Usage: " + data[fileUncoded].length;
+                    }
+                }
+            }
+            );
+
+        })
+        .catch(err => console.error("Error fetching global usage data:", err));
+}
 
 // --- Helper: Update language information for a batch of images ---
 function updateLangInfoForBatch(imagesBatch) {
@@ -198,11 +250,17 @@ function appendGalleryItems(dataBatch) {
         // Create an element for Wikipedia links that will be updated live.
         const wikipediaLinksP = document.createElement("p");
         wikipediaLinksP.className = "wikipedia-links";
-        wikipediaLinksP.textContent = "Wikipedia links: Loading...";
+        wikipediaLinksP.textContent = "Wikipedia links: (unable to fetch)";
+
+        // Create an element for global usage that will be updated live.
+        const globalUsageP = document.createElement("p");
+        globalUsageP.className = "global-usage";
+        globalUsageP.textContent = "Global Usage: (unable to fetch)";
 
         legend.appendChild(taxonNameP);
         legend.appendChild(linksP);
         legend.appendChild(wikipediaLinksP);
+        legend.appendChild(globalUsageP);
 
         div.appendChild(img);
         div.appendChild(legend);
@@ -213,9 +271,14 @@ function appendGalleryItems(dataBatch) {
 
     // Once the batch is rendered, fetch and update language info.
     updateLangInfoForBatch(dataBatch);
+
+    updateGlobalUsesForBatch(dataBatch);
 }
 
 function renderGalleryPaginated(data, reset = false) {
+
+    document.getElementById("imageCount").textContent = data.length;
+    document.getElementById("imageCounter").classList.remove("hidden");
     const gallery = document.getElementById("gallery");
     if (reset) {
         gallery.innerHTML = "";
@@ -272,9 +335,10 @@ async function fetchImages() {
 }
 
 // --- Fetch filtered images based on URL or form parameters ---
-async function fetchFilteredImages(taxonKey, continent) {
+async function fetchFilteredImages(taxonKey, continent, dataSource) {
     let endpoint = '/api/filter_images';
-    endpoint += `?taxonKey=${taxonKey || ''}&continent=${continent || ''}`;
+    endpoint += `?taxonKey=${taxonKey || ''}&continent=${continent || ''}&dataSource=${dataSource}`;
+
     try {
         const response = await fetch(endpoint);
         const data = await response.json();
@@ -288,6 +352,7 @@ async function fetchFilteredImages(taxonKey, continent) {
         document.getElementById('gallery').classList.remove('hidden');
     }
 }
+
 
 // --- URL Parameter Handling ---
 // Update the URL without reloading the page.
@@ -330,10 +395,13 @@ document.getElementById("filterForm").addEventListener("submit", async function 
 
     const taxonKey = document.getElementById("taxonSelect").value;
     const continent = document.getElementById("continentSelect").value;
+    const dataSource = document.querySelector('input[name="dataSource"]:checked').value;
 
     updateURLWithFilters(taxonKey, continent);
-    fetchFilteredImages(taxonKey, continent);
+
+    fetchFilteredImages(taxonKey, continent, dataSource);  // Pass the selected dataSource
 });
+
 
 // Reset filter to show original images and update URL.
 document.getElementById("resetFilter").addEventListener("click", function () {

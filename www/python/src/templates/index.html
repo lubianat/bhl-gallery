@@ -152,8 +152,11 @@
                 The GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions"
                     target="_blank">species API</a>
                 and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence" target="_blank">occurrence API</a>
-                filters may yield different results. Set of images updated manually due to <a
-                    href="https://phabricator.wikimedia.org/T376979" target="_blank"> of authentication in the Commons
+                filters will <span data-bs-toggle="tooltip"
+                    title="The /occurrence API will return less results, as processing occurrences on spot is a bit more intensive in terms of computation and API usage.">yield
+                    different results</span>.
+                Set of images updated manually due to <a href="https://phabricator.wikimedia.org/T376979"
+                    target="_blank"> of authentication in the Commons
                     Query Service.</a>
                 Code available on
                 <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>.
@@ -161,6 +164,9 @@
         </form>
         <div class="alert alert-light text-center" role="alert" id="loading">
             <span class="fs-5">Loading images...</span>
+        </div>
+        <div id="imageCounter" class="alert alert-success text-center hidden">
+            Images found: <span id="imageCount">0</span>
         </div>
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4" id="gallery">
             <!-- Gallery items will be dynamically inserted here -->
