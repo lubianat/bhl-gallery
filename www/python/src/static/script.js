@@ -141,6 +141,15 @@ function updateLangInfoForBatch(imagesBatch) {
                             wikiLink.textContent = lang.toUpperCase();
                             wikiLink.className = langs.includes(lang) ? "wiki-link-blue" : "wiki-link-red";
                             wikiLinksP.appendChild(wikiLink);
+                            // Add link to https://inat2wiki.toolforge.org/wikistub/lang/qid only if language is missing 
+                            // if (!langs.includes(lang)) {
+                            //     const inat2wikiLink = document.createElement("a");
+                            //     const inat2wikiUrl = `https://inat2wiki.toolforge.org/wikistub/${lang}/${qid}`;
+                            //     inat2wikiLink.href = inat2wikiUrl;
+                            //     inat2wikiLink.target = "_blank";
+                            //     inat2wikiLink.innerHTML = "<sup>+</sup>";
+                            //     wikiLinksP.appendChild(inat2wikiLink);
+                            // }
                             wikiLinksP.appendChild(document.createTextNode(" | "));
                         });
                         // Remove the last separator.
