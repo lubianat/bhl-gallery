@@ -197,6 +197,10 @@ def wikidata_langs():
 
     # Process and reformat the results:
     results = {}
+
+    # Set default as [] for each QID
+    for qid in valid_qids:
+        results[qid[3:]] = []
     for binding in data.get("results", {}).get("bindings", []):
         taxon_url = binding.get("taxon", {}).get("value", "")
         if taxon_url:

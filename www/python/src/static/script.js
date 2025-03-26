@@ -73,47 +73,27 @@ const observer = new IntersectionObserver((entries, obs) => {
 });
 
 function updateGlobalUsesForBatch(imagesBatch) {
-
-    console.log(imagesBatch);
-    // Extract unique Commons file names from the batch.
     const fileNames = imagesBatch.map(item => item.url).filter(name => name);
-
-    // Get only the file name from the URL.
     fileNames.forEach((url, index) => {
         const parts = url.split("/");
         fileNames[index] = parts[parts.length - 1];
     });
-
-    console.log(fileNames);
     const uniqueFileNames = [...new Set(fileNames)];
     if (!uniqueFileNames.length) return;
-
-    // Construct the query parameter (comma-separated list).
     const filesParam = uniqueFileNames.join("|");
 
-    // Call the new API endpoint to get global usage data.
     fetch(`/api/global_uses/${encodeURIComponent(filesParam)}`)
         .then(response => response.json())
         .then(data => {
             // Data is an object mapping each file name to its global usage info.
-            console.log(data);
             // Now update each gallery item that was rendered.
             document.querySelectorAll('.gallery-item').forEach(itemElem => {
-                console.log(itemElem);
-                const fileName = itemElem.querySelector('img').getAttribute('data-src');
+                const fileName = itemElem.querySelector('img').getAttribute('data-file');
                 if (!fileName) return; // Skip if fileName is null
-                // Uncode the file name; it is URL encoded.
-                const parts = fileName.split("/");
-                const file = parts[parts.length - 1];
-                let fileUncoded = decodeURIComponent(file);
-                fileUncoded = fileUncoded.replace(/_/g, " ");
-                console.log(fileUncoded);
-                console.log(data[fileUncoded]);
-
-                if (fileUncoded && data[fileUncoded]) {
+                if (fileName && data[fileName]) {
                     const globalUsageP = itemElem.querySelector('.global-usage');
                     if (globalUsageP) {
-                        globalUsageP.textContent = "Global Usage: " + data[fileUncoded].length;
+                        globalUsageP.textContent = "Global Usage: " + data[fileName].length;
                     }
                 }
             }
@@ -203,6 +183,12 @@ function appendGalleryItems(dataBatch) {
         const img = document.createElement("img");
         img.src = placeholder;
         img.setAttribute("data-src", imageURL);
+        // Uncode the file name; it is URL encoded.
+        const parts = imageURL.split("/");
+        const file = parts[parts.length - 1];
+        let fileUncoded = decodeURIComponent(file);
+        fileUncoded = fileUncoded.replace(/_/g, " ");
+        img.setAttribute("data-file", fileUncoded);
         img.alt = taxon_name;
 
         const legend = document.createElement("div");
@@ -314,7 +300,7 @@ const sentinelObserver = new IntersectionObserver((entries) => {
     });
 }, {
     rootMargin: "0px",
-    threshold: 1.0
+    threshold: 0.5
 });
 
 // --- Fetching Images ---
