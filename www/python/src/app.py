@@ -99,7 +99,11 @@ def filter_images():
             # Apply taxonKey filtering
             if taxon_key and taxon_key != "ALL":
                 parents = gbif_mapping.get(species_id, {}).get("parents")
-                if not parents or int(taxon_key) not in parents:
+
+                is_taxon_key_in_parents = parents and int(taxon_key) in parents
+                is_species_id_equal_to_taxon_key = int(species_id) == int(taxon_key)
+
+                if not is_taxon_key_in_parents and not is_species_id_equal_to_taxon_key:
                     continue
 
             # Apply continent filtering if provided
