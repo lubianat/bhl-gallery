@@ -55,16 +55,19 @@ async def get_gbif_data(gbif_id, data, session):
 async def main():
     # Fetch records from QLEVER
     HERE = Path(__file__).resolve().parent
-    records_path = HERE.joinpath("depicts_from_commons.json")
+    records_path = HERE.joinpath("static/depicts_from_commons.json")
     records = json.loads(records_path.read_text())
     print(f"Fetched {len(records)} records.")
 
-    gbif_mapping_path = HERE.joinpath("gbif_mapping.json")
+    gbif_mapping_path = HERE.joinpath("static/gbif_mapping.json")
     if gbif_mapping_path.exists():
         gbif_mappings = json.loads(gbif_mapping_path.read_text())
     else:
         gbif_mappings = {}
     gbif_ids = [record.get("gbif_id", "") for record in records]
+    # Filter for gbif_ids that are not already in the mapping
+    gbif_ids = [gbif_id for gbif_id in gbif_ids if gbif_id not in gbif_mappings]
+    print(f"Fetching data for {len(gbif_ids)} GBIF ids.")
 
     async with aiohttp.ClientSession() as session:
         tasks = []
