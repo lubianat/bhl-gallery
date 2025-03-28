@@ -3,6 +3,7 @@ import re
 import requests
 from flask import Flask, render_template, jsonify, request
 from urllib.parse import quote, unquote
+from wdcuration import get_statement_values
 
 app = Flask(__name__)
 
@@ -96,17 +97,14 @@ def filter_images():
         for item in images:
             species_id = str(item.get("gbif_id", ""))
 
-            # Apply taxonKey filtering
             if taxon_key and taxon_key != "ALL":
                 parents = gbif_mapping.get(species_id, {}).get("parents")
-
                 is_taxon_key_in_parents = parents and int(taxon_key) in parents
                 is_species_id_equal_to_taxon_key = int(species_id) == int(taxon_key)
 
                 if not is_taxon_key_in_parents and not is_species_id_equal_to_taxon_key:
                     continue
 
-            # Apply continent filtering if provided
             if continent:
                 if not is_in_continent(species_id, continent):
                     continue
@@ -151,9 +149,7 @@ def wikidata_langs():
     Only QIDs matching the pattern Q[digits] are accepted.
     """
     qids_str = request.args.get("qids", "")
-    # Split by comma and strip whitespace
     qids = [qid.strip() for qid in qids_str.split(",") if qid.strip()]
-    # Validate each QID (must start with 'Q' followed by numbers)
     pattern = re.compile(r"^Q\d+$")
     valid_qids = []
     for qid in qids:
@@ -162,7 +158,7 @@ def wikidata_langs():
     if not valid_qids:
         return jsonify({"error": "No valid QIDs provided."}), 400
 
-    # Build a UNION block for each valid QID
+    # Build a UNION block for each valid QID; faster than adding all in the same VALUES block.
     union_blocks = []
     for q in valid_qids:
         block = f"""
@@ -187,7 +183,6 @@ def wikidata_langs():
     }}
     GROUP BY ?taxon
     """
-    print(sparql_query)
     url = "https://query.wikidata.org/sparql"
     headers = {"Accept": "application/sparql-results+json"}
     try:
@@ -199,10 +194,8 @@ def wikidata_langs():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-    # Process and reformat the results:
     results = {}
 
-    # Set default as [] for each QID
     for qid in valid_qids:
         results[qid[3:]] = []
     for binding in data.get("results", {}).get("bindings", []):
@@ -246,9 +239,7 @@ def global_uses(files):
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
         data = response.json()
-        print(data)
     except Exception as e:
-        print("oops")
         return jsonify({"error": str(e)}), 500
 
     results = {}

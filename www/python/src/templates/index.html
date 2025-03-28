@@ -110,10 +110,16 @@
                     </select>
                 </div>
                 <div class="col-md-4 position-relative">
-                    <label for="taxonAutocomplete" class="form-label">Other taxa:</label>
-                    <input type="text" id="taxonAutocomplete" class="form-control" placeholder="Search taxon">
-                    <div id="autocompleteSuggestions" class="autocomplete-suggestions"></div>
+                    <label for="wikidataAutocomplete" class="form-label">Other taxa:</label>
+                    <input type="text" id="wikidataAutocomplete" class="form-control"
+                        placeholder="Search taxon (via Wikidata)" autocomplete="off">
+                    <div id="wikidataAutocompleteSuggestions" class="autocomplete-suggestions"></div>
+                    <div class="invalid-feedback">
+                        You’ve typed a name but haven’t selected a suggestion. Please pick one from the list or clear
+                        the field.
+                    </div>
                 </div>
+
                 <div class="col-md-4">
                     <label for="continentSelect" class="form-label">Continent:</label>
                     <select id="continentSelect" class="form-select">
@@ -140,7 +146,7 @@
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" id="sourceGbif" name="dataSource"
                             value="occurrence-api">
-                        <label class="form-check-label" for="sourceGbif">/occurence API</label>
+                        <label class="form-check-label" for="sourceGbif">/occurrence API</label>
                     </div>
                 </div>
                 <div class="col-md-6 text-md-end">
@@ -155,9 +161,9 @@
                 filters will <span data-bs-toggle="tooltip"
                     title="The /occurrence API will return less results, as processing occurrences on spot is a bit more intensive in terms of computation and API usage.">yield
                     different results</span>.
-                Set of images updated manually due to <a href="https://phabricator.wikimedia.org/T376979"
-                    target="_blank"> of authentication in the Commons
-                    Query Service.</a>
+                Set of images updated manually due to<a href="https://phabricator.wikimedia.org/T376979"
+                    target="_blank"></a>
+                the need of authentication in the Commons Query Service.</a>
                 Code available on
                 <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>.
             </p>

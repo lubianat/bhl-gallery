@@ -1,52 +1,111 @@
-// --- Autocomplete logic remains unchanged ---
-document.getElementById('taxonAutocomplete').addEventListener('input', function () {
-    const query = this.value;
+// --- Wikidata-based Autocomplete with P846, retrieving P225 (taxon name) and P846 (GBIF id) ---
+document.getElementById('wikidataAutocomplete').addEventListener('input', function () {
+    const query = this.value.trim();
+    const suggestionsContainer = document.getElementById('wikidataAutocompleteSuggestions');
+
     if (query.length < 3) {
-        document.getElementById('autocompleteSuggestions').innerHTML = '';
+        suggestionsContainer.innerHTML = '';
         return;
     }
 
-    const ranks = ['PHYLUM', 'CLASS', 'ORDER', 'FAMILY', 'GENUS', 'SPECIES'];
-    const fetchPromises = ranks.map(rank =>
-        fetch(`https://api.gbif.org/v1/species/suggest?q=${query}&rank=${rank}&status=ACCEPTED`)
-            .then(response => response.json())
-    );
+    // First call: search for entities with the given query and with a P846 statement
+    const wikidataSearchUrl = `https://www.wikidata.org/w/api.php?action=query&format=json&list=search&formatversion=2&srsearch=${encodeURIComponent(`haswbstatement:"P846" ${query}`)}&origin=*`;
 
-    Promise.all(fetchPromises)
-        .then(results => {
-            const combinedData = results.flat();
-            const suggestions = combinedData.map(item =>
-                `<div class="autocomplete-suggestion" data-key="${item.key}">${item.scientificName}</div>`
-            ).join('');
-            document.getElementById('autocompleteSuggestions').innerHTML = suggestions;
+    fetch(wikidataSearchUrl)
+        .then(response => response.json())
+        .then(searchData => {
+            // search is inside query 
+            searchData = searchData.query;
+            if (!searchData.search || searchData.search.length === 0) {
+                suggestionsContainer.innerHTML = '<div class="autocomplete-suggestion">No results found</div>';
+                return;
+            }
+
+            console.log(searchData);
+
+            // Extract QIDs from the search results
+            const qids = searchData.search.map(item => item.title).join('|');
+            console.log(qids);
+
+            // Second call: get detailed entity data for these QIDs (specifically, claims)
+            const wikidataDetailsUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qids}&props=claims&format=json&origin=*`;
+
+            fetch(wikidataDetailsUrl)
+                .then(response => response.json())
+                .then(detailsData => {
+                    console.log(detailsData);
+                    // Build suggestions using P225 and P846 from the entity claims
+                    const suggestionsHtml = searchData.search.map(item => {
+                        const qid = item.title;
+                        // Look up the entity details if available
+                        if (detailsData.entities && detailsData.entities[qid] && detailsData.entities[qid].claims) {
+                            const claims = detailsData.entities[qid].claims;
+                            if (claims.P225 && claims.P225.length > 0) {
+                                taxonName = claims.P225[0].mainsnak.datavalue.value;
+                            }
+                            if (claims.P846 && claims.P846.length > 0) {
+                                gbifId = claims.P846[0].mainsnak.datavalue.value;
+                            }
+                        }
+
+                        // Use the retrieved taxonName if available; fallback to the search result label
+                        const displayName = taxonName || item.label;
+                        // Optionally display GBIF id if available
+                        const displayGbif = gbifId ? ` (GBIF: ${gbifId})` : '';
+
+                        return `<div class="autocomplete-suggestion" data-qid="${qid}" data-label="${displayName}" data-gbif="${gbifId}">
+                        ${displayName}${displayGbif}
+                      </div>`;
+                    }).join('');
+                    suggestionsContainer.innerHTML = suggestionsHtml;
+                })
+                .catch(error => {
+                    console.error('Error fetching details from wbgetentities:', error);
+                    suggestionsContainer.innerHTML = '<div class="autocomplete-suggestion">Error fetching details</div>';
+                });
         })
         .catch(error => {
-            document.getElementById("imageCounter").classList.add("hidden");
-            console.error('Error fetching suggestions:', error);
+            console.error('Error fetching Wikidata search suggestions:', error);
+            suggestionsContainer.innerHTML = '<div class="autocomplete-suggestion">Error fetching suggestions</div>';
         });
 });
 
-document.getElementById('autocompleteSuggestions').addEventListener('click', function (event) {
+// --- Handling click on Wikidata autocomplete suggestions ---
+document.getElementById('wikidataAutocompleteSuggestions').addEventListener('click', function (event) {
     if (event.target.classList.contains('autocomplete-suggestion')) {
-        const taxonKey = event.target.getAttribute('data-key');
-        const taxonName = event.target.textContent;
+        const qid = event.target.getAttribute('data-qid');
+        const label = event.target.getAttribute('data-label');
+        const gbif = event.target.getAttribute('data-gbif'); // optional GBIF id
+
+        // Update the taxon select element with the selected value
         const select = document.getElementById('taxonSelect');
         let optionExists = false;
         for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === taxonKey) {
+            if (select.options[i].value === qid) {
                 optionExists = true;
                 break;
             }
         }
         if (!optionExists) {
-            select.innerHTML += `<option value="${taxonKey}" selected>${taxonName}</option>`;
+            // Display the scientific name and, if available, the GBIF id in the option text
+            const displayText = gbif ? `${label} (GBIF: ${gbif})` : label;
+            select.innerHTML += `<option value="${gbif}" selected>${displayText}</option>`;
         } else {
-            select.value = taxonKey;
+            select.value = qid;
         }
-        document.getElementById('autocompleteSuggestions').innerHTML = '';
-        document.getElementById('taxonAutocomplete').value = '';
+
+        // Clear the autocomplete input and suggestion container
+        document.getElementById('wikidataAutocomplete').value = '';
+        document.getElementById('wikidataAutocompleteSuggestions').innerHTML = '';
+
+        // Set the gallery and imageCounter to hidden, so the user is aware he needs to submit the form
+        document.getElementById('gallery').classList.add('hidden');
+        document.getElementById('imageCounter').classList.add('hidden');
+        // Optionally trigger the filtering immediately
+        //document.getElementById('filterForm').dispatchEvent(new Event('submit'));
     }
 });
+
 
 // --- Global variables and lazy loading setup ---
 let originalImagesData = [];
@@ -367,6 +426,7 @@ function applyFiltersFromURL() {
 
     if (taxonKey) {
         document.getElementById("taxonSelect").value = taxonKey;
+
     }
     if (continent) {
         document.getElementById("continentSelect").value = continent;
@@ -383,19 +443,35 @@ function applyFiltersFromURL() {
 }
 
 // --- Form Submission Handler ---
+// --- Form Submission Handler ---
+// Show warning if autocomplete has content but no selection
 document.getElementById("filterForm").addEventListener("submit", async function (e) {
+    const autocompleteInput = document.getElementById("wikidataAutocomplete");
+    const autocompleteValue = autocompleteInput.value.trim();
+
+    if (autocompleteValue.length > 0) {
+        e.preventDefault();
+        autocompleteInput.classList.add("is-invalid");
+        return;
+    }
+
+    autocompleteInput.classList.remove("is-invalid");
+
+    // Proceed as usual
     e.preventDefault();
     document.getElementById("loading").style.display = "block";
     document.getElementById('gallery').classList.add('hidden');
+    document.getElementById('imageCounter').classList.add('hidden');
 
     const taxonKey = document.getElementById("taxonSelect").value;
     const continent = document.getElementById("continentSelect").value;
     const dataSource = document.querySelector('input[name="dataSource"]:checked').value;
 
     updateURLWithFilters(taxonKey, continent);
-
-    fetchFilteredImages(taxonKey, continent, dataSource);  // Pass the selected dataSource
+    fetchFilteredImages(taxonKey, continent, dataSource);
 });
+
+
 
 
 // Reset filter to show original images and update URL.
