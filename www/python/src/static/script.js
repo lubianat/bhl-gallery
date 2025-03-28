@@ -152,11 +152,21 @@ function updateGlobalUsesForBatch(imagesBatch) {
                 if (fileName && data[fileName]) {
                     const globalUsageP = itemElem.querySelector('.global-usage');
                     if (globalUsageP) {
-                        globalUsageP.textContent = "Global Usage: " + data[fileName].length;
+                        // Update the content to make only the link clickable
+                        globalUsageP.textContent = "Global Usage: "; // Reset and add static text
+                        const usageLink = document.createElement("a");
+                        usageLink.href = `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(fileName)}#filelinks`;
+                        usageLink.target = "_blank";
+                        usageLink.textContent = `${data[fileName].length}`;
+                        console.log(data[fileName]);
+                        // Add tooltip with full data get all [].wiki values split by \n
+                        const tooltipData = data[fileName].map(item => item.wiki).join("\n");
+                        usageLink.title = tooltipData;
+
+                        globalUsageP.appendChild(usageLink);
                     }
                 }
-            }
-            );
+            });
 
         })
         .catch(err => console.error("Error fetching global usage data:", err));
@@ -442,7 +452,6 @@ function applyFiltersFromURL() {
     }
 }
 
-// --- Form Submission Handler ---
 // --- Form Submission Handler ---
 // Show warning if autocomplete has content but no selection
 document.getElementById("filterForm").addEventListener("submit", async function (e) {
