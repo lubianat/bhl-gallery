@@ -1,3 +1,6 @@
+
+
+
 // --- Wikidata-based Autocomplete with P846, retrieving P225 (taxon name) and P846 (GBIF id) ---
 document.getElementById('wikidataAutocomplete').addEventListener('input', function () {
     const query = this.value.trim();
@@ -70,42 +73,65 @@ document.getElementById('wikidataAutocomplete').addEventListener('input', functi
         });
 });
 
+
 // --- Handling click on Wikidata autocomplete suggestions ---
 document.getElementById('wikidataAutocompleteSuggestions').addEventListener('click', function (event) {
     if (event.target.classList.contains('autocomplete-suggestion')) {
         const qid = event.target.getAttribute('data-qid');
         const label = event.target.getAttribute('data-label');
-        const gbif = event.target.getAttribute('data-gbif'); // optional GBIF id
+        const gbif = event.target.getAttribute('data-gbif'); // Get GBIF ID
 
         // Update the taxon select element with the selected value
         const select = document.getElementById('taxonSelect');
         let optionExists = false;
+
+        // Check if an option with this GBIF ID already exists
         for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === qid) {
+            if (select.options[i].value === gbif) {
                 optionExists = true;
+                select.value = gbif; // Select the existing option
                 break;
             }
         }
-        if (!optionExists) {
-            // Display the scientific name and, if available, the GBIF id in the option text
-            const displayText = gbif ? `${label} (GBIF: ${gbif})` : label;
-            select.innerHTML += `<option value="${gbif}" selected>${displayText}</option>`;
-        } else {
-            select.value = qid;
+
+        // Add the option if it doesn't exist and we have a GBIF ID
+        if (!optionExists && gbif && gbif !== 'null' && gbif !== '') {
+            const displayText = `${label} (GBIF: ${gbif})`;
+            // Create a new option element (text, value, defaultSelected, selected)
+            const newOption = new Option(displayText, gbif, false, true);
+            select.add(newOption); // Add it to the select dropdown and select it
+        } else if (gbif && gbif !== 'null' && gbif !== '') {
+            // If it exists, ensure it's selected (already done in the loop, but safe fallback)
+            select.value = gbif;
         }
+        // Note: Consider what should happen if a selected item *doesn't* have a GBIF ID.
 
         // Clear the autocomplete input and suggestion container
         document.getElementById('wikidataAutocomplete').value = '';
         document.getElementById('wikidataAutocompleteSuggestions').innerHTML = '';
 
-        // Set the gallery and imageCounter to hidden, so the user is aware he needs to submit the form
+        // --- *** ADDED CODE TO UPDATE MAP AND TAXON HIERARCHY *** ---
+        if (gbif && gbif !== 'null' && gbif !== '') { // Ensure we have a valid GBIF ID
+            // Check if map update functions exist (they should, as they are global)
+            if (typeof updateMap === 'function' && typeof loadParentTaxa === 'function') {
+                // Call the map update and taxon hierarchy functions with the GBIF ID
+                updateMap(gbif);
+                loadParentTaxa(gbif);
+
+            } else {
+                // Log an error if functions aren't found (shouldn't happen in normal operation)
+                console.error("Map update functions (updateMap or loadParentTaxa) not found.");
+            }
+        } else {
+        }
+        // --- *** END OF ADDED CODE *** ---
+
+        // Keep gallery hidden initially after selection, requiring form submission to show images
         document.getElementById('gallery').classList.add('hidden');
+        document.getElementById('selectedTaxonName').classList.add('hidden');
         document.getElementById('imageCounter').classList.add('hidden');
-        // Optionally trigger the filtering immediately
-        //document.getElementById('filterForm').dispatchEvent(new Event('submit'));
     }
 });
-
 
 // --- Global variables and lazy loading setup ---
 let originalImagesData = [];
@@ -153,7 +179,7 @@ function updateGlobalUsesForBatch(imagesBatch) {
                     const globalUsageP = itemElem.querySelector('.global-usage');
                     if (globalUsageP) {
                         // Update the content to make only the link clickable
-                        globalUsageP.textContent = "Global Usage: "; // Reset and add static text
+                        globalUsageP.textContent = "Wikimedia Uses: "; // Reset and add static text
                         const usageLink = document.createElement("a");
                         usageLink.href = `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(fileName)}#filelinks`;
                         usageLink.target = "_blank";
@@ -273,7 +299,22 @@ function appendGalleryItems(dataBatch) {
         legend.className = "image-legend";
 
         const taxonNameP = document.createElement("p");
-        taxonNameP.textContent = taxon_name;
+        const exploreLink = document.createElement("a");
+        exploreLink.href = `./?taxonKey=${encodeURIComponent(gbif_id)}`;
+        exploreLink.title = "Click to explore this taxon";
+
+        // Check if the taxon name contains a space
+        if (taxon_name.includes(" ")) {
+            // Create an <i> element and set its text content
+            const italicName = document.createElement("i");
+            italicName.textContent = taxon_name;
+            exploreLink.appendChild(italicName);
+        } else {
+            exploreLink.textContent = taxon_name;
+        }
+
+        taxonNameP.appendChild(exploreLink);
+        taxonNameP.appendChild(exploreLink);
 
         const linksP = document.createElement("p");
         const inatLink = document.createElement("a");
@@ -343,6 +384,8 @@ function renderGalleryPaginated(data, reset = false) {
 
     document.getElementById("imageCount").textContent = data.length;
     document.getElementById("imageCounter").classList.remove("hidden");
+    document.getElementById("selectedTaxonName").classList.remove("hidden");
+
     const gallery = document.getElementById("gallery");
     if (reset) {
         gallery.innerHTML = "";
@@ -455,31 +498,52 @@ function applyFiltersFromURL() {
 // --- Form Submission Handler ---
 // Show warning if autocomplete has content but no selection
 document.getElementById("filterForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+
     const autocompleteInput = document.getElementById("wikidataAutocomplete");
     const autocompleteValue = autocompleteInput.value.trim();
+    const autocompleteInputSelected = autocompleteInput.dataset.selectedTaxonKey || '';
 
-    if (autocompleteValue.length > 0) {
-        e.preventDefault();
+    // Validate autocomplete: must select from suggestions
+    if (autocompleteValue.length > 0 && !autocompleteInputSelected) {
         autocompleteInput.classList.add("is-invalid");
         return;
+    } else {
+        autocompleteInput.classList.remove("is-invalid");
     }
 
-    autocompleteInput.classList.remove("is-invalid");
-
-    // Proceed as usual
-    e.preventDefault();
-    document.getElementById("loading").style.display = "block";
-    document.getElementById('gallery').classList.add('hidden');
-    document.getElementById('imageCounter').classList.add('hidden');
-
-    const taxonKey = document.getElementById("taxonSelect").value;
+    // Get values from the form
+    const taxonSelectValue = document.getElementById("taxonSelect").value;
     const continent = document.getElementById("continentSelect").value;
     const dataSource = document.querySelector('input[name="dataSource"]:checked').value;
 
+    // Determine final taxonKey
+    const taxonKey = autocompleteInputSelected || taxonSelectValue;
+
+    // Update interface states
+    document.getElementById("loading").style.display = "block";
+    document.getElementById('gallery').classList.add('hidden');
+    document.getElementById('imageCounter').classList.add('hidden');
+    document.getElementById('selectedTaxonName').classList.add('hidden');
+
+    // Update URL and fetch new data
     updateURLWithFilters(taxonKey, continent);
     fetchFilteredImages(taxonKey, continent, dataSource);
-});
 
+    // Update Map, Parent Taxa, and Displayed Name
+    if (taxonKey && taxonKey !== 'ALL') {
+        updateMap(taxonKey);
+        loadParentTaxa(taxonKey);
+        displaySelectedTaxon(taxonKey);  // Update displayed taxon name
+    } else {
+        document.getElementById("taxonNavigation").innerHTML = '';
+        displaySelectedTaxon(null);  // Clear displayed name
+    }
+
+    // Clear autocomplete selection data
+    autocompleteInput.value = '';
+    delete autocompleteInput.dataset.selectedTaxonKey;
+});
 
 
 

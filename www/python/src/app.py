@@ -3,7 +3,6 @@ import re
 import requests
 from flask import Flask, render_template, jsonify, request
 from urllib.parse import quote, unquote
-from wdcuration import get_statement_values
 
 app = Flask(__name__)
 
@@ -62,7 +61,6 @@ def get_images():
     Endpoint to return all images loaded from the static depicts_from_commons.json file.
     """
     try:
-        # Assuming depicts_from_commons has a similar structure to the previous QLever response.
         images = depicts_from_commons
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -80,8 +78,7 @@ def filter_images():
     """
     taxon_key = request.args.get("taxonKey")
     continent = request.args.get("continent")
-    data_source = request.args.get("dataSource")  # New parameter for data source
-    # Set data source default to 'species-api' if not provided
+    data_source = request.args.get("dataSource")
     if not data_source or data_source == "undefined":
         data_source = "species-api"
 
@@ -92,28 +89,22 @@ def filter_images():
 
     filtered_images = []
 
-    # Apply filter logic for the 'species-api' data source
     if data_source == "species-api":
         for item in images:
             species_id = str(item.get("gbif_id", ""))
-
             if taxon_key and taxon_key != "ALL":
                 parents = gbif_mapping.get(species_id, {}).get("parents")
                 is_taxon_key_in_parents = parents and int(taxon_key) in parents
                 is_species_id_equal_to_taxon_key = int(species_id) == int(taxon_key)
-
                 if not is_taxon_key_in_parents and not is_species_id_equal_to_taxon_key:
                     continue
-
             if continent:
                 if not is_in_continent(species_id, continent):
                     continue
-
             filtered_images.append(item)
 
-    # Apply filter logic for the 'occurrence-api' data source (fetch from the GBIF API)
     elif data_source == "occurrence-api":
-        # Function to fetch data from GBIF Occurrence API
+
         def fetch_gbif_occurrence_data(taxon_key, continent):
             gbif_url = f"https://api.gbif.org/v1/occurrence/search?taxonKey={taxon_key}&limit=100&facet=speciesKey&facetMincount=10&facetLimit=5000"
             if continent:
@@ -122,18 +113,13 @@ def filter_images():
 
         if taxon_key and taxon_key != "ALL":
             occurrence_data = fetch_gbif_occurrence_data(taxon_key, continent)
-
-            # Filter the occurrence data based on the provided taxonKey
             if "facets" in occurrence_data:
-                # Assuming `facets` contain filtered species keys
                 valid_species_keys = set(
                     [
                         str(facet["name"])
                         for facet in occurrence_data["facets"][0]["counts"]
                     ]
                 )
-
-                # Filter images using the valid GBIF occurrence species keys
                 for item in images:
                     if str(item.get("gbif_id", "")) in valid_species_keys:
                         filtered_images.append(item)
@@ -158,7 +144,6 @@ def wikidata_langs():
     if not valid_qids:
         return jsonify({"error": "No valid QIDs provided."}), 400
 
-    # Build a UNION block for each valid QID; faster than adding all in the same VALUES block.
     union_blocks = []
     for q in valid_qids:
         block = f"""
@@ -195,7 +180,6 @@ def wikidata_langs():
         return jsonify({"error": str(e)}), 500
 
     results = {}
-
     for qid in valid_qids:
         results[qid[3:]] = []
     for binding in data.get("results", {}).get("bindings", []):
@@ -214,27 +198,20 @@ def global_uses(files):
     Calls the MediaWiki API (from Commons) to get global usage info for each file.
     Returns a JSON object mapping each file name to its global usage data.
     """
-    # Split and clean the file names from the URL path.
     file_names = files.split("|")
-
-    # Build the titles parameter using MediaWiki's expected syntax.
-    # Example: "File:Example.jpg|File:Another.png"
     if "File:" in file_names:
         file_names = [file_name.replace("File:", "") for file_name in file_names]
     titles = "|".join([f"File:{file_name}" for file_name in file_names])
-    # Retrive the file name from the encoded url, fixing al the %20 to spaces and similar changes
     titles = unquote(titles)
 
-    # Set up API parameters.
     params = {
         "action": "query",
         "titles": titles,
         "prop": "globalusage",
         "format": "json",
-        "gulimit": "max",  # Request as many results as allowed.
+        "gulimit": "max",
     }
     url = "https://commons.wikimedia.org/w/api.php"
-
     try:
         response = requests.get(url, params=params, timeout=10)
         response.raise_for_status()
@@ -245,12 +222,27 @@ def global_uses(files):
     results = {}
     pages = data.get("query", {}).get("pages", {})
     for page_id, page_data in pages.items():
-        # Extract the Commons file name (remove the "File:" prefix)
         title = page_data.get("title", "")
         file_name = title[5:] if title.startswith("File:") else title
         global_usage = page_data.get("globalusage", [])
         results[file_name] = global_usage
     return jsonify(results)
+
+
+# New endpoint to fetch parent taxa from GBIF's Species API
+@app.route("/api/parent_taxa/<taxon_key>")
+def get_parent_taxa(taxon_key):
+    """
+    Endpoint to fetch parent taxa from GBIF's Species API.
+    """
+    try:
+        url = f"https://api.gbif.org/v1/species/{taxon_key}/parents"
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        parent_data = response.json()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify(parent_data)
 
 
 if __name__ == "__main__":
