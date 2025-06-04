@@ -82,7 +82,6 @@ h1 {
     display: none;
 }
 
-/* Lobster font */
 .fancy-style {
     font-family: 'Pacifico';
 }
@@ -91,7 +90,6 @@ h1 {
     background: #bbceb4;
     color: black;
     padding: 15px;
-    border-radius: 8px;
     border: 1px solid #ddd;
 }
 
@@ -101,21 +99,16 @@ h1 {
 
 a {
     color: #3b7a57;
-    /* Deep green, natural yet professional */
     text-decoration: none;
-    /* Remove underline by default */
     transition: color 0.3s ease, text-decoration 0.3s ease;
 }
 
 a:hover,
 a:focus {
     color: #285238;
-    /* Slightly darker green on hover */
     text-decoration: underline;
-    /* Underline on hover/focus for clarity */
 }
 
-/* Update footer content layout */
 .footer-content {
     display: flex;
     flex-wrap: wrap;
@@ -130,15 +123,7 @@ a:focus {
     margin: 0 15px;
 }
 
-.partnership-notice a {
-    color: #3b7a57;
-    white-space: nowrap;
-}
-
 /* Mobile adjustments */
-/* Existing footer styles remain */
-
-/* Mobile footer adjustments */
 @media (max-width: 768px) {
     footer {
         padding: 8px 0;
@@ -156,7 +141,6 @@ a:focus {
         font-size: 0.8em;
     }
 
-    /* Hide partnership notice on mobile */
     .partnership-notice {
         display: none;
     }
