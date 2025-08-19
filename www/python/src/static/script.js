@@ -1,7 +1,4 @@
-
-
-
-// --- Wikidata-based Autocomplete with P846, retrieving P225 (taxon name) and P846 (GBIF id) ---
+// --- Wikidata-based Autocomplete with P846, retrieving P225 (taxon name) and P846 (GBIF ID) ---
 document.getElementById('wikidataAutocomplete').addEventListener('input', function () {
     const query = this.value.trim();
     const suggestionsContainer = document.getElementById('wikidataAutocompleteSuggestions');
@@ -23,20 +20,18 @@ document.getElementById('wikidataAutocomplete').addEventListener('input', functi
                 suggestionsContainer.innerHTML = '<div class="autocomplete-suggestion">No results found</div>';
                 return;
             }
-
-            console.log(searchData);
-
             // Extract QIDs from the search results
             const qids = searchData.search.map(item => item.title).join('|');
-            console.log(qids);
 
             // Second call: get detailed entity data for these QIDs (specifically, claims)
+
+            // Note: May be improved by using https://www.wikidata.org/wiki/Wikidata:REST_API 
             const wikidataDetailsUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qids}&props=claims&format=json&origin=*`;
 
             fetch(wikidataDetailsUrl)
                 .then(response => response.json())
                 .then(detailsData => {
-                    console.log(detailsData);
+
                     // Build suggestions using P225 and P846 from the entity claims
                     const suggestionsHtml = searchData.search.map(item => {
                         const qid = item.title;
@@ -51,9 +46,9 @@ document.getElementById('wikidataAutocomplete').addEventListener('input', functi
                             }
                         }
 
-                        // Use the retrieved taxonName if available; fallback to the search result label
                         const displayName = taxonName || item.label;
-                        // Optionally display GBIF id if available
+                        // Optionally display GBIF id if available. 
+                        // It should always be.
                         const displayGbif = gbifId ? ` (GBIF: ${gbifId})` : '';
 
                         return `<div class="autocomplete-suggestion" data-qid="${qid}" data-label="${displayName}" data-gbif="${gbifId}">
@@ -73,63 +68,42 @@ document.getElementById('wikidataAutocomplete').addEventListener('input', functi
         });
 });
 
+// Handling click on default taxa
+document.getElementById('taxonSelect').addEventListener('click', function (event) {
+    updateGallery();
+});
+
+// Handling click on continents
+document.getElementById('continentSelect').addEventListener('click', function (event) {
+    updateGallery();
+});
 
 // --- Handling click on Wikidata autocomplete suggestions ---
 document.getElementById('wikidataAutocompleteSuggestions').addEventListener('click', function (event) {
     if (event.target.classList.contains('autocomplete-suggestion')) {
-        const qid = event.target.getAttribute('data-qid');
+        // const qid = event.target.getAttribute('data-qid');
         const label = event.target.getAttribute('data-label');
         const gbif = event.target.getAttribute('data-gbif'); // Get GBIF ID
 
-        // Update the taxon select element with the selected value
         const select = document.getElementById('taxonSelect');
-        let optionExists = false;
 
-        // Check if an option with this GBIF ID already exists
-        for (let i = 0; i < select.options.length; i++) {
-            if (select.options[i].value === gbif) {
-                optionExists = true;
-                select.value = gbif; // Select the existing option
-                break;
-            }
-        }
-
-        // Add the option if it doesn't exist and we have a GBIF ID
-        if (!optionExists && gbif && gbif !== 'null' && gbif !== '') {
+        if (gbif && gbif !== 'null' && gbif !== '') {
             const displayText = `${label} (GBIF: ${gbif})`;
-            // Create a new option element (text, value, defaultSelected, selected)
             const newOption = new Option(displayText, gbif, false, true);
-            select.add(newOption); // Add it to the select dropdown and select it
+            select.add(newOption);
         } else if (gbif && gbif !== 'null' && gbif !== '') {
-            // If it exists, ensure it's selected (already done in the loop, but safe fallback)
+            // If it exists, ensure it's selected 
             select.value = gbif;
         }
-        // Note: Consider what should happen if a selected item *doesn't* have a GBIF ID.
-
-        // Clear the autocomplete input and suggestion container
         document.getElementById('wikidataAutocomplete').value = '';
         document.getElementById('wikidataAutocompleteSuggestions').innerHTML = '';
 
-        // --- *** ADDED CODE TO UPDATE MAP AND TAXON HIERARCHY *** ---
-        if (gbif && gbif !== 'null' && gbif !== '') { // Ensure we have a valid GBIF ID
-            // Check if map update functions exist (they should, as they are global)
-            if (typeof updateMap === 'function' && typeof loadParentTaxa === 'function') {
-                // Call the map update and taxon hierarchy functions with the GBIF ID
-                updateMap(gbif);
-                loadParentTaxa(gbif);
-
-            } else {
-                // Log an error if functions aren't found (shouldn't happen in normal operation)
-                console.error("Map update functions (updateMap or loadParentTaxa) not found.");
-            }
+        if (gbif && gbif !== 'null' && gbif !== '') {
+            loadTaxonInformation(gbif);
         } else {
         }
-        // --- *** END OF ADDED CODE *** ---
-
-        // Keep gallery hidden initially after selection, requiring form submission to show images
-        document.getElementById('gallery').classList.add('hidden');
+        updateGallery();
         document.getElementById('selectedTaxonName').classList.add('hidden');
-        document.getElementById('imageCounter').classList.add('hidden');
     }
 });
 
@@ -137,7 +111,7 @@ document.getElementById('wikidataAutocompleteSuggestions').addEventListener('cli
 let originalImagesData = [];
 let imagesData = [];
 let currentPage = 0;
-const pageSize = 10; // Adjust as needed
+const pageSize = 10;
 const placeholder = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
 
 const observer = new IntersectionObserver((entries, obs) => {
@@ -171,7 +145,6 @@ function updateGlobalUsesForBatch(imagesBatch) {
         .then(response => response.json())
         .then(data => {
             // Data is an object mapping each file name to its global usage info.
-            // Now update each gallery item that was rendered.
             document.querySelectorAll('.gallery-item').forEach(itemElem => {
                 const fileName = itemElem.querySelector('img').getAttribute('data-file');
                 if (!fileName) return; // Skip if fileName is null
@@ -200,7 +173,6 @@ function updateGlobalUsesForBatch(imagesBatch) {
 
 // --- Helper: Update language information for a batch of images ---
 function updateLangInfoForBatch(imagesBatch) {
-    // Extract unique QIDs from the batch.
     const qids = imagesBatch.map(item => {
         // Assuming item.taxon.value is something like "http://www.wikidata.org/entity/Q12345"
         const url = item.taxon;
@@ -209,21 +181,17 @@ function updateLangInfoForBatch(imagesBatch) {
     const uniqueQIDs = [...new Set(qids)];
     if (!uniqueQIDs.length) return;
 
-    // Construct the query parameter.
     const qidsParam = uniqueQIDs.join(",");
     fetch(`/api/wikidata_langs?qids=${encodeURIComponent(qidsParam)}`)
         .then(response => response.json())
         .then(data => {
             // Data is an object mapping QIDs to a list of languages.
-            // Now, update each gallery item that was rendered.
             // For this, we assume each gallery item container has a data attribute 'data-qid'
             document.querySelectorAll('.gallery-item').forEach(itemElem => {
                 const qid = itemElem.getAttribute('data-qid');
                 if (qid && data[qid]) {
-                    // Find the element that holds the Wikipedia links.
                     const wikiLinksP = itemElem.querySelector('.wikipedia-links');
                     if (wikiLinksP) {
-                        // Clear existing links.
                         wikiLinksP.innerHTML = "Wikipedia links: ";
                         // Create new links based on the live language data.
                         let langs = data[qid];
@@ -236,15 +204,6 @@ function updateLangInfoForBatch(imagesBatch) {
                             wikiLink.textContent = lang.toUpperCase();
                             wikiLink.className = langs.includes(lang) ? "wiki-link-blue" : "wiki-link-red";
                             wikiLinksP.appendChild(wikiLink);
-                            // Add link to https://inat2wiki.toolforge.org/wikistub/lang/qid only if language is missing 
-                            // if (!langs.includes(lang)) {
-                            //     const inat2wikiLink = document.createElement("a");
-                            //     const inat2wikiUrl = `https://inat2wiki.toolforge.org/wikistub/${lang}/${qid}`;
-                            //     inat2wikiLink.href = inat2wikiUrl;
-                            //     inat2wikiLink.target = "_blank";
-                            //     inat2wikiLink.innerHTML = "<sup>+</sup>";
-                            //     wikiLinksP.appendChild(inat2wikiLink);
-                            // }
                             wikiLinksP.appendChild(document.createTextNode(" | "));
                         });
                         // Remove the last separator.
@@ -376,7 +335,6 @@ function appendGalleryItems(dataBatch) {
 
     // Once the batch is rendered, fetch and update language info.
     updateLangInfoForBatch(dataBatch);
-
     updateGlobalUsesForBatch(dataBatch);
 }
 
@@ -462,7 +420,6 @@ async function fetchFilteredImages(taxonKey, continent, dataSource) {
 
 
 // --- URL Parameter Handling ---
-// Update the URL without reloading the page.
 function updateURLWithFilters(taxonKey, continent) {
     const params = new URLSearchParams();
     if (taxonKey) params.set("taxonKey", taxonKey);
@@ -496,10 +453,8 @@ function applyFiltersFromURL() {
 }
 
 // --- Form Submission Handler ---
-// Show warning if autocomplete has content but no selection
-document.getElementById("filterForm").addEventListener("submit", async function (e) {
-    e.preventDefault();
 
+function updateGallery() {
     const autocompleteInput = document.getElementById("wikidataAutocomplete");
     const autocompleteValue = autocompleteInput.value.trim();
     const autocompleteInputSelected = autocompleteInput.dataset.selectedTaxonKey || '';
@@ -534,15 +489,24 @@ document.getElementById("filterForm").addEventListener("submit", async function 
     if (taxonKey && taxonKey !== 'ALL') {
         updateMap(taxonKey);
         loadParentTaxa(taxonKey);
-        displaySelectedTaxon(taxonKey);  // Update displayed taxon name
+        displaySelectedTaxon(taxonKey); // Update displayed taxon name
     } else {
         document.getElementById("taxonNavigation").innerHTML = '';
-        displaySelectedTaxon(null);  // Clear displayed name
+        displaySelectedTaxon(null); // Clear displayed name
     }
 
     // Clear autocomplete selection data
     autocompleteInput.value = '';
     delete autocompleteInput.dataset.selectedTaxonKey;
+
+}
+
+
+
+document.getElementById("filterForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    updateGallery();
+
 });
 
 
@@ -558,3 +522,184 @@ document.getElementById("resetFilter").addEventListener("click", function () {
 
 // --- On page load, check for filter parameters ---
 window.addEventListener("load", applyFiltersFromURL);
+
+
+// Fetch and display taxon name from GBIF
+function displaySelectedTaxon(taxonKey) {
+    const taxonNameEl = document.getElementById("selectedTaxonName");
+    const taxonSelect = document.getElementById("taxonSelect");
+
+    if (!taxonKey || taxonKey === '' || taxonKey === 'ALL') {
+        taxonNameEl.textContent = ''; // Clear if no taxon selected
+        return;
+    }
+
+    fetch(`https://api.gbif.org/v1/species/${taxonKey}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("GBIF taxon data:");
+            console.log(data);
+            let name;
+
+            if (data.canonicalName) {
+                name = data.canonicalName;
+
+                // Check if the canonical name contains a space (likely binomial nomenclature for species)
+                if (name.includes(' ')) {
+                    // Use innerHTML to add italics tags
+                    taxonNameEl.innerHTML = '<i>' + name + '</i>';
+                } else {
+                    // If no space, just set the text content (no italics needed)
+                    taxonNameEl.textContent = name;
+                }
+
+            } else {
+                // Handle the case where the canonical name is unavailable
+                name = '';
+                taxonNameEl.textContent = name; // Keep this as plain text
+            }
+
+
+            // Update the select box: add the option if it doesn't exist, then select it
+            if (taxonSelect) {
+                let optionExists = false;
+                for (let i = 0; i < taxonSelect.options.length; i++) {
+                    if (taxonSelect.options[i].value === taxonKey) {
+                        optionExists = true;
+                        break;
+                    }
+                }
+                if (!optionExists) {
+                    const newOption = document.createElement("option");
+                    newOption.value = taxonKey;
+                    newOption.textContent = name;
+                    taxonSelect.appendChild(newOption);
+                }
+                taxonSelect.value = taxonKey;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching taxon name:', error);
+            taxonNameEl.textContent = 'Taxon name unavailable';
+        });
+}
+
+
+function toggleTaxonInfo() {
+    var content = document.getElementById("taxonInfoContent");
+    var arrow = document.getElementById("arrow");
+    if (content.style.display === "none") {
+        content.style.display = "block";
+        arrow.innerHTML = "&#x25BC;"; // Down arrow when expanded
+        map.invalidateSize();
+    } else {
+        content.style.display = "none";
+        arrow.innerHTML = "&#x25B6;"; // Right arrow when folded
+    }
+}
+
+// Utility functions for URL query parameter management
+function getQueryParams() {
+    return new URLSearchParams(window.location.search);
+}
+function updateQueryParam(taxonKey) {
+    let params = getQueryParams();
+    if (taxonKey && taxonKey !== '') {
+        params.set('taxonKey', taxonKey);
+    } else {
+        params.delete('taxonKey');
+    }
+    let newUrl = window.location.pathname + '?' + params.toString();
+    history.replaceState(null, '', newUrl);
+}
+
+// Initialize Leaflet map with OSM as the base layer
+var map = L.map('distributionMap', {}).setView([0, 0], 1);
+// OpenStreetMap Base Layer
+var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data © OpenStreetMap contributors'
+}).addTo(map);
+
+var gbifTileUrl = 'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?&taxonKey=';
+var currentTaxonKey = '';
+var gbifLayer = L.tileLayer(gbifTileUrl + currentTaxonKey, {
+    attribution: 'Occurrence data © GBIF',
+    maxZoom: 10
+}).addTo(map);
+
+
+function loadTaxonInformation(taxonKey) {
+    if (taxonKey == "ALL") {
+        document.getElementById('taxonInfoAccordion').classList.add('hidden');
+    } else {
+        document.getElementById("taxonInfoAccordion").classList.remove("hidden");
+    }
+    updateMap(taxonKey);
+    loadParentTaxa(taxonKey);
+}
+
+// Function to update the GBIF overlay layer when the taxon changes
+function updateMap(taxonKey) {
+    currentTaxonKey = taxonKey;
+    map.removeLayer(gbifLayer);
+    gbifLayer = L.tileLayer(gbifTileUrl + currentTaxonKey, {
+        attribution: 'Occurrence data © GBIF',
+        maxZoom: 10
+    }).addTo(map);
+    // Update the overlayMaps control if needed
+    updateQueryParam(taxonKey);
+}
+
+// Function to load parent taxa and display as navigation links
+function loadParentTaxa(taxonKey) {
+    fetch('/api/parent_taxa/' + taxonKey)
+        .then(response => response.json())
+        .then(data => {
+            var container = document.getElementById('taxonNavigation');
+            container.innerHTML = '';
+            console.log(data);
+            if (data.length > 0) {
+                var list = document.createElement('ul');
+                data.forEach(function (taxon) {
+                    var listItem = document.createElement('li');
+                    var link = document.createElement('a');
+                    link.href = "./?taxonKey=" + taxon.key;
+                    link.textContent = taxon.scientificName + ' (' + taxon.rank + ')';
+                    listItem.appendChild(link);
+                    list.appendChild(listItem);
+                });
+                container.appendChild(list);
+            } else {
+                container.textContent = 'No parent taxa found.';
+            }
+        })
+        .catch(console.error);
+}
+
+// On page load, check if a taxonKey exists in the URL and initialize accordingly
+var params = new URLSearchParams(window.location.search);
+var initialTaxonKey = params.get('taxonKey');
+if (initialTaxonKey && initialTaxonKey !== '' && initialTaxonKey !== 'ALL') {
+    currentTaxonKey = initialTaxonKey;
+    loadTaxonInformation(currentTaxonKey);
+    displaySelectedTaxon(currentTaxonKey);
+} else {
+    // Fallback to ALL
+    loadTaxonInformation("ALL");
+    displaySelectedTaxon(null); // Clear displayed taxon name
+}
+
+// Listen for changes in the taxon select input and update accordingly
+document.getElementById("taxonSelect").addEventListener("change", function (e) {
+    var taxonKey = e.target.value;
+    if (taxonKey && taxonKey !== "" && taxonKey !== "ALL") {
+        loadTaxonInformation(taxonKey);
+        displaySelectedTaxon(taxonKey);
+    } else {
+        console.log("No taxon found!");
+        loadTaxonInformation("ALL");
+        document.getElementById("taxonNavigation").innerHTML = '';
+        updateQueryParam('');
+        displaySelectedTaxon(null);
+    }
+});

@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+
+{% block main %}
+
+<main>
+    <div class="container py-4">
+
+        <h2>About</h2>
+
+
+        <p>
+            This project explores images from the
+            <a href="https://www.biodiversitylibrary.org/" target="_blank">Biodiversity Heritage Library (BHL)</a>,
+            with support from
+            <a href="https://www.gbif.org" target="_blank">GBIF</a>,
+            <a href="https://www.wikidata.org" target="_blank">Wikidata</a>,
+            and
+            <a href="https://commons.wikimedia.org" target="_blank">Wikimedia Commons</a>.
+        </p>
+
+        <p>
+            The project enables filtering by taxa and location to find beautiful, freely licensed images (usually public
+            domain) images.
+
+            Its main userbase are Wikimedians who are interested in improving Wikipedia articles on biodiversity,
+            thus in addition to the images, a count of the usages around Wikipedias in all languages (and other projects
+            like Wikidata) as well as links to the page about the taxon in four Wikipedia language editions (English,
+            Portuguese, Spanish and
+            French) are shown. These languages were selected due to relevance for African and South American countries,
+            the initial focus of the work.
+
+        </p>
+
+
+        <h2>Data sources</h2>
+
+        <p> Images come from Wikimedia Commons and were uploaded there from the Biodiversity Heritage Library over the
+            decades by volunteers and staff. </p>
+
+        <p>
+            The image metadata was curated as Structured Data on Commons combining volunteer work with a
+            Wikimedian-in-Residence hired from November 2024 to May 2025. There is a nice <a
+                href="blog.biodiversitylibrary.org/2025/07/seeds-for-future-closing-thoughts-from-bhls-wikimedian-in-residence.html"
+                target="_blank" rel="noopener">blog post about this work</a>.
+
+        </p>
+
+        <p>
+            A detailed explanation of the BHL-Wikimedia partnership is available on <a
+                href="https://meta.wikimedia.org/wiki/User:GFontenelle_(WMF)/BHL" target="_blank" rel="noopener">
+                MetaWiki</a>.
+        </p>
+
+
+        <h2>Integration with GBIF</h2>
+
+        <p class="mt-3" id="descriptionNotes"> The GBIF <a
+                href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions"
+                target="_blank">species API</a> and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence"
+                target="_blank">occurrence API</a> filters on the main page may return different results.
+
+            The /species API filter relies on a set of pre-run queries to enrich the dataset with GBIF information on
+            where species occurr, leveraging textual content and country-level information.
+
+            The /occurrence API will return less results and may take longer, as it runs live requests to GBIF to gather
+            occurrences for the selected taxa in the target region. As this is computationally intensive, and we do not
+            aim for a comprehensive coverage, this option may have less coverage for some groups.
+
+            GBIF is also used as a source of the Global Occurence Map, which includes occurrences everywhere for the
+            selected taxa.
+
+        <h2>Code</h2>
+
+        <p>
+            The source code and issue/bug tracking are available
+            <a href=" https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>.
+            Feedback and contributions are welcome! If you prefer, you can also reach out to
+            <a href="https://tiago.bio.br" target="_blank">Tiago</a> directly.
+        </p>
+
+    </div>
+</main>
+
+{% endblock %}
