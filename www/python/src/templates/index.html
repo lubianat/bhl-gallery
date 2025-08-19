@@ -58,8 +58,8 @@
                 </div>
             </div>
             <div class="row g-3 align-items-center mt-3">
-                <div class="col-md-6">
-                    <label class="form-label d-block">Data Source:</label>
+                <div class="col-md-6 d-flex align-items-center">
+                    <label class="form-label mb-0 me-3">Data Source:</label>
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" id="sourceJson" name="dataSource"
                             value="species-api" checked>
@@ -71,10 +71,7 @@
                         <label class="form-check-label" for="sourceGbif">/occurrence API</label>
                     </div>
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <button type="submit" class="btn btn-primary me-2">Apply Filter</button>
-                    <button type="button" id="resetFilter" class="btn btn-secondary">Reset Filter</button>
-                </div>
+
             </div>
             <p class="mt-3" id="descriptionNotes">
                 The GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions"
