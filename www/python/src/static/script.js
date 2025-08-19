@@ -99,8 +99,7 @@ document.getElementById('wikidataAutocompleteSuggestions').addEventListener('cli
         document.getElementById('wikidataAutocompleteSuggestions').innerHTML = '';
 
         if (gbif && gbif !== 'null' && gbif !== '') {
-            updateMap(gbif);
-            loadParentTaxa(gbif);
+            loadTaxonInformation(gbif);
         } else {
         }
         updateGallery();
@@ -628,6 +627,17 @@ var gbifLayer = L.tileLayer(gbifTileUrl + currentTaxonKey, {
     maxZoom: 10
 }).addTo(map);
 
+
+function loadTaxonInformation(taxonKey) {
+    if (taxonKey == "ALL") {
+        document.getElementById('taxonInfoAccordion').classList.add('hidden');
+    } else {
+        document.getElementById("taxonInfoAccordion").classList.remove("hidden");
+    }
+    updateMap(taxonKey);
+    loadParentTaxa(taxonKey);
+}
+
 // Function to update the GBIF overlay layer when the taxon changes
 function updateMap(taxonKey) {
     currentTaxonKey = taxonKey;
@@ -671,11 +681,11 @@ var params = new URLSearchParams(window.location.search);
 var initialTaxonKey = params.get('taxonKey');
 if (initialTaxonKey && initialTaxonKey !== '' && initialTaxonKey !== 'ALL') {
     currentTaxonKey = initialTaxonKey;
-    updateMap(currentTaxonKey);
-    loadParentTaxa(currentTaxonKey);
+    loadTaxonInformation(currentTaxonKey);
     displaySelectedTaxon(currentTaxonKey);
 } else {
-    console.log("No taxon found!");
+    // Fallback to ALL
+    loadTaxonInformation("ALL");
     displaySelectedTaxon(null); // Clear displayed taxon name
 }
 
@@ -683,11 +693,11 @@ if (initialTaxonKey && initialTaxonKey !== '' && initialTaxonKey !== 'ALL') {
 document.getElementById("taxonSelect").addEventListener("change", function (e) {
     var taxonKey = e.target.value;
     if (taxonKey && taxonKey !== "" && taxonKey !== "ALL") {
-        updateMap(taxonKey);
-        loadParentTaxa(taxonKey);
+        loadTaxonInformation(taxonKey);
         displaySelectedTaxon(taxonKey);
     } else {
         console.log("No taxon found!");
+        loadTaxonInformation("ALL");
         document.getElementById("taxonNavigation").innerHTML = '';
         updateQueryParam('');
         displaySelectedTaxon(null);

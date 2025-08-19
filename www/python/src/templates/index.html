@@ -24,7 +24,7 @@
                 <div class="col-md-4 position-relative">
                     <label for="wikidataAutocomplete" class="form-label">Other taxa:</label>
                     <input type="text" id="wikidataAutocomplete" class="form-control"
-                        placeholder="Search taxon (via Wikidata)" autocomplete="off">
+                        placeholder="Search taxon (common or scientific names)" autocomplete="off">
                     <div id="wikidataAutocompleteSuggestions" class="autocomplete-suggestions"></div>
                     <div class="invalid-feedback">
                         You’ve typed a name but haven’t selected a suggestion. Please pick one from the list or
@@ -70,10 +70,13 @@
         <h2 class="fancy-style text-center" id="selectedTaxonName"></h2>
         <div id="taxonInfoAccordion">
             <h2 class="fancy-style" style="cursor: pointer;" onclick="toggleTaxonInfo()">
-                Taxon Information <span id="arrow">&#x25B6;</span>
+                Hierarchy & Map <span id="arrow">&#x25B6;</span>
             </h2>
 
             <div id="taxonInfoContent" style="display: none;">
+                <div>
+                    <p> Click on a name to search for images about it.</p>
+                </div>
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h2 class="text-center fancy-style">Taxonomic Hierarchy</h2>
