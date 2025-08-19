@@ -105,8 +105,6 @@ document.getElementById('wikidataAutocompleteSuggestions').addEventListener('cli
         }
         updateGallery();
         document.getElementById('selectedTaxonName').classList.add('hidden');
-
-
     }
 });
 
@@ -525,3 +523,173 @@ document.getElementById("resetFilter").addEventListener("click", function () {
 
 // --- On page load, check for filter parameters ---
 window.addEventListener("load", applyFiltersFromURL);
+
+
+// Fetch and display taxon name from GBIF
+function displaySelectedTaxon(taxonKey) {
+    const taxonNameEl = document.getElementById("selectedTaxonName");
+    const taxonSelect = document.getElementById("taxonSelect");
+
+    if (!taxonKey || taxonKey === '' || taxonKey === 'ALL') {
+        taxonNameEl.textContent = ''; // Clear if no taxon selected
+        return;
+    }
+
+    fetch(`https://api.gbif.org/v1/species/${taxonKey}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log("GBIF taxon data:");
+            console.log(data);
+            let name;
+
+            if (data.canonicalName) {
+                name = data.canonicalName;
+
+                // Check if the canonical name contains a space (likely binomial nomenclature for species)
+                if (name.includes(' ')) {
+                    // Use innerHTML to add italics tags
+                    taxonNameEl.innerHTML = '<i>' + name + '</i>';
+                } else {
+                    // If no space, just set the text content (no italics needed)
+                    taxonNameEl.textContent = name;
+                }
+
+            } else {
+                // Handle the case where the canonical name is unavailable
+                name = '';
+                taxonNameEl.textContent = name; // Keep this as plain text
+            }
+
+
+            // Update the select box: add the option if it doesn't exist, then select it
+            if (taxonSelect) {
+                let optionExists = false;
+                for (let i = 0; i < taxonSelect.options.length; i++) {
+                    if (taxonSelect.options[i].value === taxonKey) {
+                        optionExists = true;
+                        break;
+                    }
+                }
+                if (!optionExists) {
+                    const newOption = document.createElement("option");
+                    newOption.value = taxonKey;
+                    newOption.textContent = name;
+                    taxonSelect.appendChild(newOption);
+                }
+                taxonSelect.value = taxonKey;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching taxon name:', error);
+            taxonNameEl.textContent = 'Taxon name unavailable';
+        });
+}
+
+
+function toggleTaxonInfo() {
+    var content = document.getElementById("taxonInfoContent");
+    var arrow = document.getElementById("arrow");
+    if (content.style.display === "none") {
+        content.style.display = "block";
+        arrow.innerHTML = "&#x25BC;"; // Down arrow when expanded
+        map.invalidateSize();
+    } else {
+        content.style.display = "none";
+        arrow.innerHTML = "&#x25B6;"; // Right arrow when folded
+    }
+}
+
+// Utility functions for URL query parameter management
+function getQueryParams() {
+    return new URLSearchParams(window.location.search);
+}
+function updateQueryParam(taxonKey) {
+    let params = getQueryParams();
+    if (taxonKey && taxonKey !== '') {
+        params.set('taxonKey', taxonKey);
+    } else {
+        params.delete('taxonKey');
+    }
+    let newUrl = window.location.pathname + '?' + params.toString();
+    history.replaceState(null, '', newUrl);
+}
+
+// Initialize Leaflet map with OSM as the base layer
+var map = L.map('distributionMap', {}).setView([0, 0], 1);
+// OpenStreetMap Base Layer
+var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: 'Map data © OpenStreetMap contributors'
+}).addTo(map);
+
+var gbifTileUrl = 'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?&taxonKey=';
+var currentTaxonKey = '';
+var gbifLayer = L.tileLayer(gbifTileUrl + currentTaxonKey, {
+    attribution: 'Occurrence data © GBIF',
+    maxZoom: 10
+}).addTo(map);
+
+// Function to update the GBIF overlay layer when the taxon changes
+function updateMap(taxonKey) {
+    currentTaxonKey = taxonKey;
+    map.removeLayer(gbifLayer);
+    gbifLayer = L.tileLayer(gbifTileUrl + currentTaxonKey, {
+        attribution: 'Occurrence data © GBIF',
+        maxZoom: 10
+    }).addTo(map);
+    // Update the overlayMaps control if needed
+    updateQueryParam(taxonKey);
+}
+
+// Function to load parent taxa and display as navigation links
+function loadParentTaxa(taxonKey) {
+    fetch('/api/parent_taxa/' + taxonKey)
+        .then(response => response.json())
+        .then(data => {
+            var container = document.getElementById('taxonNavigation');
+            container.innerHTML = '';
+            console.log(data);
+            if (data.length > 0) {
+                var list = document.createElement('ul');
+                data.forEach(function (taxon) {
+                    var listItem = document.createElement('li');
+                    var link = document.createElement('a');
+                    link.href = "./?taxonKey=" + taxon.key;
+                    link.textContent = taxon.scientificName + ' (' + taxon.rank + ')';
+                    listItem.appendChild(link);
+                    list.appendChild(listItem);
+                });
+                container.appendChild(list);
+            } else {
+                container.textContent = 'No parent taxa found.';
+            }
+        })
+        .catch(console.error);
+}
+
+// On page load, check if a taxonKey exists in the URL and initialize accordingly
+var params = new URLSearchParams(window.location.search);
+var initialTaxonKey = params.get('taxonKey');
+if (initialTaxonKey && initialTaxonKey !== '' && initialTaxonKey !== 'ALL') {
+    currentTaxonKey = initialTaxonKey;
+    updateMap(currentTaxonKey);
+    loadParentTaxa(currentTaxonKey);
+    displaySelectedTaxon(currentTaxonKey);
+} else {
+    console.log("No taxon found!");
+    displaySelectedTaxon(null); // Clear displayed taxon name
+}
+
+// Listen for changes in the taxon select input and update accordingly
+document.getElementById("taxonSelect").addEventListener("change", function (e) {
+    var taxonKey = e.target.value;
+    if (taxonKey && taxonKey !== "" && taxonKey !== "ALL") {
+        updateMap(taxonKey);
+        loadParentTaxa(taxonKey);
+        displaySelectedTaxon(taxonKey);
+    } else {
+        console.log("No taxon found!");
+        document.getElementById("taxonNavigation").innerHTML = '';
+        updateQueryParam('');
+        displaySelectedTaxon(null);
+    }
+});

@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+
+{% block main %}
+
+<div class="alert alert-info text-center" role="alert">
+    <strong>Note:</strong> This application is currently in testing. Please report any issues or feedback on
+    the
+    <a href="https://github.com/lubianat/bhl_image_explorer/issues" target="_blank">GitHub Repo</a> or to
+    <a href="https://tiago.bio.br" target="_blank">Tiago</a> wherever you prefer.
+</div>
+
+<p class="mt-3" id="descriptionNotes">
+    The GBIF <a href="https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions"
+        target="_blank">species API</a>
+    and <a href="https://techdocs.gbif.org/en/openapi/v1/occurrence" target="_blank">occurrence API</a>
+    filters will <span data-bs-toggle="tooltip"
+        title="The /occurrence API will return less results, as processing occurrences on spot is a bit more intensive in terms of computation and API usage.">yield
+        different results</span>.
+    Set of images updated manually due to <a href="https://phabricator.wikimedia.org/T376979" target="_blank"></a>
+    the need of authentication in the Commons Query Service.
+    Code available on
+    <a href="https://github.com/lubianat/bhl_image_explorer" target="_blank">GitHub</a>.
+</p>
+
+<!-- Desktop Version -->
+<div class="d-none d-md-block text-muted">
+    Powered by
+    <a href="https://www.biodiversitylibrary.org/" target="_blank" rel="noopener">BHL</a>,
+    <a href="https://www.gbif.org" target="_blank" rel="noopener">GBIF</a>,
+    <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> and
+    <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a>
+</div>
+
+<!-- Mobile Version -->
+<div class="d-md-none text-muted">
+    Powered by
+    <a href="https://www.biodiversitylibrary.org/" target="_blank" rel="noopener">BHL</a> +
+    <a href="https://www.gbif.org" target="_blank" rel="noopener">GBIF</a> +
+    <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> +
+    <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Commons</a>
+</div>
+
+<div class="d-none d-md-block partnership-notice">
+    Made with ❤️ by <a href="https://tiago.bio.br" target="_blank" rel="noopener">Tiago</a> for the
+    <a href="https://meta.wikimedia.org/wiki/Biodiversity_Heritage_Library" target="_blank" rel="noopener">BHL-Wiki
+        partnership</a>
+</div>
+
+<a href="#" class="back-to-top d-none d-md-inline-block">↑ Back to top</a>
+</div>
+
+{% endblock %}
