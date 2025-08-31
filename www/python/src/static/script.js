@@ -620,8 +620,12 @@ var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     attribution: 'Map data © OpenStreetMap contributors'
 }).addTo(map);
 
-var gbifTileUrl = 'https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@1x.png?&taxonKey=';
-var currentTaxonKey = '';
+var gbifTileUrl = "https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@2x.png" +
+    "?style=iNaturalist.poly" +
+    "&bin=hex" +
+    "&hexSize=64" +
+    "&taxonKey="; var currentTaxonKey = '';
+
 var gbifLayer = L.tileLayer(gbifTileUrl + currentTaxonKey, {
     attribution: 'Occurrence data © GBIF',
     maxZoom: 10
