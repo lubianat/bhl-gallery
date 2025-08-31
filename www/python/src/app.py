@@ -4,6 +4,8 @@ import requests
 from flask import Flask, render_template, jsonify, request
 from urllib.parse import quote, unquote
 
+USER_AGENT = "BHL-Image-Explorer/0.1 (https://tiago.bio.br; https://www.wikidata.org/wiki/User:TiagoLubiana)"
+
 app = Flask(__name__)
 
 # Load static JSON files at startup
@@ -174,7 +176,7 @@ def wikidata_langs():
     GROUP BY ?taxon
     """
     url = "https://query.wikidata.org/sparql"
-    headers = {"Accept": "application/sparql-results+json"}
+    headers = {"Accept": "application/sparql-results+json", "User-Agent": USER_AGENT}
     try:
         response = requests.get(
             url, params={"query": sparql_query}, headers=headers, timeout=10
@@ -218,7 +220,9 @@ def global_uses(files):
     }
     url = "https://commons.wikimedia.org/w/api.php"
     try:
-        response = requests.get(url, params=params, timeout=10)
+        response = requests.get(
+            url, params=params, timeout=10, headers={"User-Agent": USER_AGENT}
+        )
         response.raise_for_status()
         data = response.json()
     except Exception as e:
