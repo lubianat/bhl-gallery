@@ -3,79 +3,71 @@
 {% block main %}
 
 <main>
-    <div class="container py-4">
-        <h1 class="text-center mb-4 fancy-style">BHL Image Explorer</h1>
-        <p class="text-center mb-4 fancy-style">
-            powered by
-            <a href="https://www.biodiversitylibrary.org/" target="_blank" rel="noopener">BHL</a>,
-            <a href="https://www.gbif.org" target="_blank" rel="noopener">GBIF</a>,
-            <a href="https://www.wikidata.org" target="_blank" rel="noopener">Wikidata</a> and
-            <a href="https://commons.wikimedia.org" target="_blank" rel="noopener">Wikimedia Commons</a>
-
-        </p>
-
-
-        <form id="filterForm" class="mb-4">
-            <div class="row g-3 align-items-center">
-                <div class="col-md-4">
-                    <label for="taxonSelect" class="form-label">Default taxa:</label>
-                    <select id="taxonSelect" class="form-select" required>
-                        <option value="">Select a taxon</option>
-                        <option value="ALL">All</option>
-                        <option value="212">Aves</option>
-                        <option value="216">Insecta</option>
-                        <option value="131">Amphibia</option>
-                        <option value="359">Mammalia</option>
-                        <option value="6">Plantae</option>
-                        <option value="587">Perciformes</option>
-                    </select>
-                </div>
-                <div class="col-md-4 position-relative">
-                    <label for="wikidataAutocomplete" class="form-label">Other taxa:</label>
-                    <input type="text" id="wikidataAutocomplete" class="form-control"
-                        placeholder="Search taxon (common or scientific names)" autocomplete="off">
-                    <div id="wikidataAutocompleteSuggestions" class="autocomplete-suggestions"></div>
-                    <div class="invalid-feedback">
-                        You’ve typed a name but haven’t selected a suggestion. Please pick one from the list or
-                        clear
-                        the field.
+    <div class="container">
+        <div class="p-3 mb-4 bg-light rounded shadow-sm">
+            <h6 class="fw-bold mb-3">Filters:</h6>
+            <form id="filterForm" class="mb-4">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-4">
+                        <label for="taxonSelect" class="form-label">Default taxa:</label>
+                        <select id="taxonSelect" class="form-select" required>
+                            <option value="">Select a taxon</option>
+                            <option value="ALL">All</option>
+                            <option value="212">Aves</option>
+                            <option value="216">Insecta</option>
+                            <option value="131">Amphibia</option>
+                            <option value="359">Mammalia</option>
+                            <option value="6">Plantae</option>
+                            <option value="587">Perciformes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 position-relative">
+                        <label for="wikidataAutocomplete" class="form-label">Other taxa:</label>
+                        <input type="text" id="wikidataAutocomplete" class="form-control"
+                            placeholder="Search taxon (common or scientific names)" autocomplete="off">
+                        <div id="wikidataAutocompleteSuggestions" class="autocomplete-suggestions"></div>
+                        <div class="invalid-feedback">
+                            You’ve typed a name but haven’t selected a suggestion. Please pick one from the list or
+                            clear
+                            the field.
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="continentSelect" class="form-label">Continent:</label>
+                        <select id="continentSelect" class="form-select">
+                            <option value="">Any</option>
+                            <option value="AFRICA">AFRICA</option>
+                            <option value="ANTARCTICA">ANTARCTICA</option>
+                            <option value="ASIA">ASIA</option>
+                            <option value="OCEANIA">OCEANIA</option>
+                            <option value="EUROPE">EUROPE</option>
+                            <option value="NORTH_AMERICA">NORTH_AMERICA</option>
+                            <option value="SOUTH_AMERICA">SOUTH_AMERICA</option>
+                        </select>
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <label for="continentSelect" class="form-label">Continent:</label>
-                    <select id="continentSelect" class="form-select">
-                        <option value="">Any</option>
-                        <option value="AFRICA">AFRICA</option>
-                        <option value="ANTARCTICA">ANTARCTICA</option>
-                        <option value="ASIA">ASIA</option>
-                        <option value="OCEANIA">OCEANIA</option>
-                        <option value="EUROPE">EUROPE</option>
-                        <option value="NORTH_AMERICA">NORTH_AMERICA</option>
-                        <option value="SOUTH_AMERICA">SOUTH_AMERICA</option>
-                    </select>
-                </div>
-            </div>
-            <div class="row g-3 align-items-center mt-3">
-                <div class="col-md-6 d-flex align-items-center">
-                    <label class="form-label mb-0 me-3">Data Source:</label>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="sourceJson" name="dataSource"
-                            value="species-api" checked>
-                        <label class="form-check-label" for="sourceJson">/species GBIF API (distribution)</label>
+                <div class="row g-3 align-items-center mt-3">
+                    <div class="col-md-6 d-flex align-items-center">
+                        <label class="form-label mb-0 me-3">Search continents with:</label>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" id="sourceJson" name="dataSource"
+                                value="species-api" checked>
+                            <label class="form-check-label" for="sourceJson">GBIF "species" API (cached)</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" id="sourceGbif" name="dataSource"
+                                value="occurrence-api">
+                            <label class="form-check-label" for="sourceGbif">GBIF "occurrence" API (live) </label>
+                        </div>
                     </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" id="sourceGbif" name="dataSource"
-                            value="occurrence-api">
-                        <label class="form-check-label" for="sourceGbif">/occurrence API</label>
+                    <div class="col-md-6 text-md-end">
+                        <button type="button" id="resetFilter" class="btn btn-outline-danger">Reset Filters</button>
                     </div>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <button type="button" id="resetFilter" class="btn btn-secondary">Reset Filters</button>
+
                 </div>
 
-            </div>
-
-        </form>
+            </form>
+        </div>
         <h2 class="fancy-style text-center" id="selectedTaxonName"></h2>
         <div id="taxonInfoAccordion">
             <h2 class="fancy-style" style="cursor: pointer;" onclick="toggleTaxonInfo()">
