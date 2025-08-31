@@ -629,7 +629,7 @@ var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 }).addTo(map);
 
 var gbifTileUrl = "https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@2x.png" +
-    "?style=iNaturalist.poly" +
+    "?style=green2-noborder.poly" +
     "&bin=hex" +
     "&hexSize=64" +
     "&taxonKey="; var currentTaxonKey = '';
