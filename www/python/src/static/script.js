@@ -629,9 +629,9 @@ var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 }).addTo(map);
 
 var gbifTileUrl = "https://api.gbif.org/v2/map/occurrence/density/{z}/{x}/{y}@2x.png" +
-    "?style=green2-noborder.poly" +
+    "?style=orange.marker" +
     "&bin=hex" +
-    "&hexSize=64" +
+    "&hexSize=16" +
     "&taxonKey="; var currentTaxonKey = '';
 
 var gbifLayer = L.tileLayer(gbifTileUrl + currentTaxonKey, {
