@@ -69,13 +69,21 @@ document.getElementById('wikidataAutocomplete').addEventListener('input', functi
 });
 
 // Handling click on default taxa
-document.getElementById('taxonSelect').addEventListener('click', function (event) {
+document.getElementById('taxonSelect').addEventListener('change', () => {
+    if (!taxonSelect.value) return; // optional guard for the empty option
     updateGallery();
 });
 
+
 // Handling click on continents
-document.getElementById('continentSelect').addEventListener('click', function (event) {
+document.getElementById('continentSelect').addEventListener('change', () => {
     updateGallery();
+});
+
+// Handling click on radio buttons 
+
+document.querySelectorAll('input[name="dataSource"]').forEach(element => {
+    element.addEventListener('change', updateGallery);
 });
 
 // --- Handling click on Wikidata autocomplete suggestions ---
