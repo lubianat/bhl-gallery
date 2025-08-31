@@ -1,3 +1,8 @@
+
+const WMF_API_HEADERS = {
+    'Api-User-Agent': 'BHL-Image-Explorer/0.1 (https://tiago.bio.br; https://www.wikidata.org/wiki/User:TiagoLubiana)'
+};
+
 // --- Wikidata-based Autocomplete with P846, retrieving P225 (taxon name) and P846 (GBIF ID) ---
 document.getElementById('wikidataAutocomplete').addEventListener('input', function () {
     const query = this.value.trim();
@@ -11,7 +16,7 @@ document.getElementById('wikidataAutocomplete').addEventListener('input', functi
     // First call: search for entities with the given query and with a P846 statement
     const wikidataSearchUrl = `https://www.wikidata.org/w/api.php?action=query&format=json&list=search&formatversion=2&srsearch=${encodeURIComponent(`haswbstatement:"P846" ${query}`)}&origin=*`;
 
-    fetch(wikidataSearchUrl)
+    fetch(wikidataSearchUrl, { headers: WMF_API_HEADERS })
         .then(response => response.json())
         .then(searchData => {
             // search is inside query 
@@ -28,7 +33,7 @@ document.getElementById('wikidataAutocomplete').addEventListener('input', functi
             // Note: May be improved by using https://www.wikidata.org/wiki/Wikidata:REST_API 
             const wikidataDetailsUrl = `https://www.wikidata.org/w/api.php?action=wbgetentities&ids=${qids}&props=claims&format=json&origin=*`;
 
-            fetch(wikidataDetailsUrl)
+            fetch(wikidataDetailsUrl, { headers: WMF_API_HEADERS })
                 .then(response => response.json())
                 .then(detailsData => {
 
