@@ -24,6 +24,14 @@ These languages were selected due to their relevance for African and South Ameri
 
 ---
 
+### Curation of Structured Data on Commons
+
+The curation of the data behind the platform is described on a [dedicated repository](https://github.com/lubianat/bhl_sdc_data_curation).
+The general flow may be seen in the image below:
+
+![A workflow for adding metadata as Structured Data on Commons from BHL images](www/python/src/static/bhl_to_sdc_pipeline.png)
+
+
 ## Integration with GBIF
 
 The [GBIF species API](https://techdocs.gbif.org/en/openapi/v1/species#/Species/getNameUsageDistributions) and  
