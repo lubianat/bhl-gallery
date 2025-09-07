@@ -13,6 +13,8 @@ In addition to the images, the site shows:
 
 These languages were selected due to their relevance for African and South American countries, the initial focus of the work.
 
+A video overview of the tool is [available online](https://www.youtube.com/watch?v=te5dMi363QE).
+
 ---
 
 ## Data sources
